@@ -20,6 +20,8 @@ import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.unit.dp
 import org.jetbrains.compose.resources.stringResource
 import zed.rainxch.githubstore.core.presentation.res.Res
+import zed.rainxch.githubstore.core.presentation.res.open_github_link
+import zed.rainxch.githubstore.core.presentation.res.open_in_browser
 import zed.rainxch.githubstore.core.presentation.res.report_issue
 
 fun LazyListScope.reportIssue(
@@ -44,7 +46,7 @@ fun LazyListScope.reportIssue(
             ) {
                 Icon(
                     imageVector = Icons.Default.BugReport,
-                    contentDescription = null,
+                    contentDescription = stringResource(Res.string.report_issue),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.size(32.dp)
                 )
@@ -58,7 +60,7 @@ fun LazyListScope.reportIssue(
 
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                    contentDescription = null,
+                    contentDescription = stringResource(Res.string.open_in_browser),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.size(20.dp)
                 )
