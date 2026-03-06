@@ -1,6 +1,5 @@
 package zed.rainxch.favourites.presentation.components
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -15,16 +14,21 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CalendarToday
+import androidx.compose.material.icons.filled.Code
 import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
+import androidx.compose.material.icons.filled.NewReleases
+import androidx.compose.material3.AssistChip
+import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.CircularWavyProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
+import androidx.compose.material3.MaterialShapes
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.toShape
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -35,9 +39,11 @@ import androidx.compose.ui.unit.dp
 import com.skydoves.landscapist.coil3.CoilImage
 import com.skydoves.landscapist.components.rememberImageComponent
 import com.skydoves.landscapist.crossfade.CrossfadePlugin
-import zed.rainxch.githubstore.core.presentation.res.*
 import org.jetbrains.compose.resources.stringResource
+import zed.rainxch.core.presentation.components.ExpressiveCard
 import zed.rainxch.favourites.presentation.model.FavouriteRepository
+import zed.rainxch.githubstore.core.presentation.res.Res
+import zed.rainxch.githubstore.core.presentation.res.remove_from_favourites
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
@@ -46,15 +52,11 @@ fun FavouriteRepositoryItem(
     onToggleFavouriteClick: () -> Unit,
     onItemClick: () -> Unit,
     onDevProfileClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
-    Card(
-        modifier = modifier.fillMaxWidth(),
+    ExpressiveCard(
+        modifier = modifier,
         onClick = onItemClick,
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainer
-        ),
-        shape = RoundedCornerShape(24.dp)
     ) {
         Column(
             modifier = Modifier
@@ -63,9 +65,9 @@ fun FavouriteRepositoryItem(
         ) {
             Row(
                 modifier = Modifier
-                    .clickable(onClick = {
-                        onDevProfileClick()
-                    }),
+                    .fillMaxWidth()
+                    .clickable(onClick = onDevProfileClick)
+                    .clip(RoundedCornerShape(24.dp)),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
@@ -92,12 +94,12 @@ fun FavouriteRepositoryItem(
                     style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.outline,
                     maxLines = 1,
-                    softWrap = false,
-                    overflow = TextOverflow.Ellipsis
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f)
                 )
             }
 
-            Spacer(modifier = Modifier.height(4.dp))
+            Spacer(modifier = Modifier.height(8.dp))
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -113,34 +115,28 @@ fun FavouriteRepositoryItem(
                         style = MaterialTheme.typography.titleLarge,
                         color = MaterialTheme.colorScheme.onSurface,
                         maxLines = 1,
-                        softWrap = false,
                         overflow = TextOverflow.Ellipsis
                     )
 
                     favouriteRepository.repoDescription?.let {
-                        Spacer(Modifier.height(4.dp))
+                        Spacer(modifier = Modifier.height(4.dp))
 
                         Text(
                             text = it,
                             fontWeight = FontWeight.Medium,
-                            style = MaterialTheme.typography.titleMedium,
+                            style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             maxLines = 2,
-                            softWrap = true,
                             overflow = TextOverflow.Ellipsis
                         )
                     }
                 }
 
                 IconButton(
-                    onClick = {
-                        onToggleFavouriteClick()
-                    },
-                    colors = IconButtonDefaults.iconButtonColors(
-                        containerColor = MaterialTheme.colorScheme.primaryContainer,
-                        contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                    ),
-                    shapes = IconButtonDefaults.shapes()
+                    onClick = onToggleFavouriteClick,
+                    colors = IconButtonDefaults.filledTonalIconButtonColors(),
+                    modifier = Modifier.align(Alignment.CenterVertically),
+                    shape = MaterialShapes.Cookie6Sided.toShape()
                 ) {
                     Icon(
                         imageVector = Icons.Default.Favorite,
@@ -149,50 +145,78 @@ fun FavouriteRepositoryItem(
                 }
             }
 
-            favouriteRepository.primaryLanguage?.let {
-                Spacer(modifier = Modifier.height(6.dp))
+            Spacer(modifier = Modifier.height(12.dp))
 
-                Text(
-                    text = it,
-                    fontWeight = FontWeight.Medium,
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer,
-                    maxLines = 1,
-                    softWrap = false,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier
-                        .background(
-                            color = MaterialTheme.colorScheme.primaryContainer,
-                            shape = RoundedCornerShape(12.dp)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                favouriteRepository.primaryLanguage?.let { language ->
+                    AssistChip(
+                        onClick = { /* No action */ },
+                        label = {
+                            Text(
+                                text = language,
+                                style = MaterialTheme.typography.titleSmall,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        },
+                        leadingIcon = {
+                            Icon(
+                                imageVector = Icons.Default.Code,
+                                contentDescription = null,
+                                modifier = Modifier.size(AssistChipDefaults.IconSize)
+                            )
+                        },
+                        colors = AssistChipDefaults.assistChipColors(
+                            containerColor = MaterialTheme.colorScheme.primaryContainer,
+                            labelColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                            leadingIconContentColor = MaterialTheme.colorScheme.onPrimaryContainer
                         )
-                        .padding(8.dp)
+                    )
+                }
+
+                favouriteRepository.latestRelease?.let { release ->
+                    AssistChip(
+                        onClick = { /* No action */ },
+                        label = {
+                            Text(
+                                text = release,
+                                style = MaterialTheme.typography.titleSmall,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        },
+                        leadingIcon = {
+                            Icon(
+                                imageVector = Icons.Default.NewReleases,
+                                contentDescription = null,
+                                modifier = Modifier.size(AssistChipDefaults.IconSize)
+                            )
+                        }
+                    )
+                }
+
+                AssistChip(
+                    onClick = { /* No action */ },
+                    label = {
+                        Text(
+                            text = favouriteRepository.addedAtFormatter,
+                            style = MaterialTheme.typography.titleSmall,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    },
+                    leadingIcon = {
+                        Icon(
+                            imageVector = Icons.Default.CalendarToday,
+                            contentDescription = null,
+                            modifier = Modifier.size(AssistChipDefaults.IconSize)
+                        )
+                    }
                 )
             }
-            favouriteRepository.latestRelease?.let {
-                Spacer(modifier = Modifier.height(6.dp))
-
-                Text(
-                    text = it,
-                    fontWeight = FontWeight.Medium,
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    maxLines = 1,
-                    softWrap = false,
-                    overflow = TextOverflow.Ellipsis
-                )
-            }
-
-            Spacer(modifier = Modifier.height(6.dp))
-
-            Text(
-                text = favouriteRepository.addedAtFormatter,
-                fontWeight = FontWeight.Medium,
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onSurface,
-                maxLines = 1,
-                softWrap = false,
-                overflow = TextOverflow.Ellipsis
-            )
         }
     }
 }

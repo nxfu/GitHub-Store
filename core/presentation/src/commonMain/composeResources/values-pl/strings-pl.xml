@@ -243,9 +243,9 @@
     <string name="star_repos_hint">Oznacz repozytoria z instalowalnymi wydaniami na GitHubie</string>
     <string name="last_synced">Ostatnia synchronizacja</string>
     <string name="just_now">Przed chwilą</string>
-    <string name="minutes_ago">%d min temu</string>
-    <string name="hours_ago">%d h temu</string>
-    <string name="days_ago">%d d temu</string>
+    <string name="minutes_ago">%1$d min temu</string>
+    <string name="hours_ago">%1$d h temu</string>
+    <string name="days_ago">%1$d d temu</string>
     <string name="dismiss">Zamknij</string>
     <string name="sync_starred_failed">Nie udało się zsynchronizować oznaczonych gwiazdką repozytoriów</string>
 

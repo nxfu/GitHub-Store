@@ -278,9 +278,9 @@
     <string name="star_repos_hint">Yüklenebilir sürümlü repoları görmek için GitHub'da yıldızlayın</string>
     <string name="last_synced">Son eşitleme</string>
     <string name="just_now">Şimdi</string>
-    <string name="minutes_ago">%d dakika önce</string>
-    <string name="hours_ago">%d saat önce</string>
-    <string name="days_ago">%d gün önce</string>
+    <string name="minutes_ago">%1$d dakika önce</string>
+    <string name="hours_ago">%1$d saat önce</string>
+    <string name="days_ago">%1$d gün önce</string>
     <string name="dismiss">Kapat</string>
 		<string name="sync_starred_failed">Yıldızlı repoları eşitlerken hata</string>
 

@@ -227,9 +227,9 @@
     <string name="star_repos_hint">在 GitHub 上收藏有可安装版本的仓库以在此查看</string>
     <string name="last_synced">上次同步</string>
     <string name="just_now">刚刚</string>
-    <string name="minutes_ago">%d 分钟前</string>
-    <string name="hours_ago">%d 小时前</string>
-    <string name="days_ago">%d 天前</string>
+    <string name="minutes_ago">%1$d 分钟前</string>
+    <string name="hours_ago">%1$d 小时前</string>
+    <string name="days_ago">%1$d 天前</string>
     <string name="dismiss">关闭</string>
     <string name="sync_starred_failed">同步收藏的仓库失败</string>
 

@@ -279,9 +279,9 @@
     <string name="star_repos_hint">ইনস্টলযোগ্য রিলিজ থাকা রিপোজিটরি GitHub-এ স্টার করুন</string>
     <string name="last_synced">শেষ সিঙ্ক</string>
     <string name="just_now">এইমাত্র</string>
-    <string name="minutes_ago">%d মিনিট আগে</string>
-    <string name="hours_ago">%d ঘণ্টা আগে</string>
-    <string name="days_ago">%d দিন আগে</string>
+    <string name="minutes_ago">%1$d মিনিট আগে</string>
+    <string name="hours_ago">%1$d ঘণ্টা আগে</string>
+    <string name="days_ago">%1$d দিন আগে</string>
     <string name="dismiss">বন্ধ করুন</string>
     <string name="sync_starred_failed">স্টার করা রিপোজিটরি সিঙ্ক করতে ব্যর্থ হয়েছে</string>
 

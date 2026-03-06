@@ -109,7 +109,7 @@ fun FavouritesScreen(
                         onDevProfileClick = {
                             onAction(FavouritesAction.OnDeveloperProfileClick(repo.repoOwner))
                         },
-                        modifier = Modifier.Companion.animateItem()
+                        modifier = Modifier.animateItem()
                     )
                 }
             }
