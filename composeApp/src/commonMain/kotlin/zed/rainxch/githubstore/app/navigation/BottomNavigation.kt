@@ -385,9 +385,9 @@ private fun LiquidGlassTabItem(
                         lineHeight = 12.sp
                     ),
                     color = if (isSelected) {
-                        MaterialTheme.colorScheme.onPrimaryContainer
-                    } else {
                         MaterialTheme.colorScheme.onSurface
+                    } else {
+                        MaterialTheme.colorScheme.onSurface.copy(alpha = .7f)
                     },
                     maxLines = 1
                 )

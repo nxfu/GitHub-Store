@@ -252,7 +252,6 @@ fun LiquidGlassCategoryChips(
                     category = category,
                     isSelected = category == selectedCategory,
                     onSelect = { onCategorySelected(category) },
-                    isDarkTheme = isDarkTheme,
                     modifier = Modifier.weight(1f),
                     onPositioned = { x, width ->
                         itemPositions[index] = x to width
@@ -276,7 +275,6 @@ private fun LiquidGlassCategoryChip(
     category: HomeCategory,
     isSelected: Boolean,
     onSelect: () -> Unit,
-    isDarkTheme: Boolean,
     modifier: Modifier = Modifier,
     onPositioned: suspend (x: Float, width: Float) -> Unit
 ) {
@@ -301,7 +299,7 @@ private fun LiquidGlassCategoryChip(
 
     val textColor by animateColorAsState(
         targetValue = if (isSelected) {
-            MaterialTheme.colorScheme.onPrimaryContainer
+            MaterialTheme.colorScheme.onSurface
         } else {
             MaterialTheme.colorScheme.onSurface.copy(alpha = .65f)
         },
