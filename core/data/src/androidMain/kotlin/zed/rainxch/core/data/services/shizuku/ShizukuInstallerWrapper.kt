@@ -4,6 +4,7 @@ import co.touchlab.kermit.Logger
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import zed.rainxch.core.domain.model.GithubAsset
 import zed.rainxch.core.domain.model.InstallerType
@@ -130,23 +131,20 @@ class ShizukuInstallerWrapper(
                         Logger.d(TAG) { "Shizuku install SUCCEEDED for: $filePath" }
                         return
                     }
-                    Logger.w(TAG) { "Shizuku install FAILED with code: $result" }
-                    throw IllegalStateException("Shizuku install failed (code: $result)")
+                    Logger.w(TAG) { "Shizuku install FAILED with code: $result, falling back to standard installer" }
                 } else {
                     Logger.w(TAG) { "Shizuku service is NULL, falling back to standard installer" }
                 }
-            } catch (e: IllegalStateException) {
-                Logger.e(TAG) { "Shizuku install error (re-throwing): ${e.message}" }
-                throw e
             } catch (e: Exception) {
                 Logger.e(TAG) { "Shizuku install exception, falling back: ${e.javaClass.simpleName}: ${e.message}" }
-                Logger.e(TAG) { e.stackTraceToString() }
             }
         } else {
             Logger.d(TAG) { "Not using Shizuku (enabled=${isShizukuEnabled()}, status=${shizukuServiceManager.status.value})" }
         }
 
+        // Fallback: ensure permissions then use standard installer
         Logger.d(TAG) { "Using standard AndroidInstaller for: $filePath" }
+        androidInstaller.ensurePermissionsOrThrow(extOrMime)
         androidInstaller.install(filePath, extOrMime)
     }
 
@@ -156,31 +154,30 @@ class ShizukuInstallerWrapper(
 
         if (isShizukuEnabled() && shizukuServiceManager.status.value == ShizukuStatus.READY) {
             Logger.d(TAG) { "Attempting Shizuku uninstall..." }
-            try {
-                val service = shizukuServiceManager.installerService
-                if (service != null) {
-                    Logger.d(TAG) { "Got cached service, calling uninstallPackage($packageName) on background thread..." }
-                    // Fire on background thread — callers don't await result for standard uninstall either
-                    Thread {
-                        try {
-                            val result = service.uninstallPackage(packageName)
-                            Logger.d(TAG) { "Shizuku uninstallPackage() returned: $result" }
-                            if (result == 0) {
-                                Logger.d(TAG) { "Shizuku uninstall SUCCEEDED for: $packageName" }
-                            } else {
-                                Logger.w(TAG) { "Shizuku uninstall FAILED with code: $result" }
-                            }
-                        } catch (e: Exception) {
-                            Logger.e(TAG) { "Shizuku uninstall thread exception: ${e.message}" }
+            // Fire on background thread — callers don't await result for standard uninstall either
+            Thread {
+                try {
+                    // Bind/get service on this background thread (getService is suspend)
+                    val service = runBlocking { shizukuServiceManager.getService() }
+                    if (service != null) {
+                        Logger.d(TAG) { "Got service, calling uninstallPackage($packageName)..." }
+                        val result = service.uninstallPackage(packageName)
+                        Logger.d(TAG) { "Shizuku uninstallPackage() returned: $result" }
+                        if (result == 0) {
+                            Logger.d(TAG) { "Shizuku uninstall SUCCEEDED for: $packageName" }
+                        } else {
+                            Logger.w(TAG) { "Shizuku uninstall FAILED with code: $result" }
                         }
-                    }.start()
-                    return
-                } else {
-                    Logger.w(TAG) { "Cached Shizuku service is NULL, falling back" }
+                    } else {
+                        Logger.w(TAG) { "Shizuku service is NULL, falling back" }
+                        androidInstaller.uninstall(packageName)
+                    }
+                } catch (e: Exception) {
+                    Logger.e(TAG) { "Shizuku uninstall exception, falling back: ${e.message}" }
+                    androidInstaller.uninstall(packageName)
                 }
-            } catch (e: Exception) {
-                Logger.e(TAG) { "Shizuku uninstall exception, falling back: ${e.javaClass.simpleName}: ${e.message}" }
-            }
+            }.start()
+            return
         }
 
         Logger.d(TAG) { "Using standard AndroidInstaller uninstall for: $packageName" }

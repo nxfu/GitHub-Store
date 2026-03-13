@@ -470,6 +470,7 @@
     <string name="clear_cache">Clear cache</string>
     <string name="current_size">Current size:</string>
     <string name="clear">Clear</string>
+    <string name="cache_cleared">The cache is gradually cleared.</string>
 
     <string name="sponsor_title">Support GitHub Store</string>
     <string name="sponsor_button">Support the project</string>

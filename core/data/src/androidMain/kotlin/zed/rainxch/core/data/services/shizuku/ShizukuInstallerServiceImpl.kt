@@ -3,6 +3,7 @@ package zed.rainxch.core.data.services.shizuku
 import android.os.ParcelFileDescriptor
 import java.io.BufferedReader
 import java.io.InputStreamReader
+import java.util.concurrent.TimeUnit
 
 /**
  * Shizuku UserService implementation that runs in a privileged process (shell/root).
@@ -24,6 +25,8 @@ class ShizukuInstallerServiceImpl() : IShizukuInstallerService.Stub() {
 
         private const val STATUS_SUCCESS = 0
         private const val STATUS_FAILURE = -1
+        private const val INSTALL_TIMEOUT_SECONDS = 120L
+        private const val UNINSTALL_TIMEOUT_SECONDS = 30L
 
         private fun log(msg: String) = android.util.Log.d(TAG, msg)
         private fun logW(msg: String) = android.util.Log.w(TAG, msg)
@@ -67,9 +70,22 @@ class ShizukuInstallerServiceImpl() : IShizukuInstallerService.Stub() {
             val stdout = BufferedReader(InputStreamReader(process.inputStream)).readText().trim()
             val stderr = BufferedReader(InputStreamReader(process.errorStream)).readText().trim()
 
-            writeThread.join(120_000) // 2 minute timeout for write thread
+            writeThread.join(INSTALL_TIMEOUT_SECONDS * 1000)
+            if (writeThread.isAlive) {
+                logE("Write thread timed out after ${INSTALL_TIMEOUT_SECONDS}s, aborting install")
+                writeThread.interrupt()
+                process.destroyForcibly()
+                return STATUS_FAILURE
+            }
 
-            val exitCode = process.waitFor()
+            val finished = process.waitFor(INSTALL_TIMEOUT_SECONDS, TimeUnit.SECONDS)
+            if (!finished) {
+                logE("pm install timed out after ${INSTALL_TIMEOUT_SECONDS}s, aborting")
+                process.destroyForcibly()
+                return STATUS_FAILURE
+            }
+
+            val exitCode = process.exitValue()
             log("pm install — exitCode=$exitCode, stdout='$stdout', stderr='$stderr'")
 
             if (exitCode == 0 && stdout.contains("Success")) {
@@ -94,8 +110,15 @@ class ShizukuInstallerServiceImpl() : IShizukuInstallerService.Stub() {
             val process = Runtime.getRuntime().exec(command)
             val stdout = BufferedReader(InputStreamReader(process.inputStream)).readText().trim()
             val stderr = BufferedReader(InputStreamReader(process.errorStream)).readText().trim()
-            val exitCode = process.waitFor()
 
+            val finished = process.waitFor(UNINSTALL_TIMEOUT_SECONDS, TimeUnit.SECONDS)
+            if (!finished) {
+                logE("pm uninstall timed out after ${UNINSTALL_TIMEOUT_SECONDS}s, aborting")
+                process.destroyForcibly()
+                return STATUS_FAILURE
+            }
+
+            val exitCode = process.exitValue()
             log("pm uninstall — exitCode=$exitCode, stdout='$stdout', stderr='$stderr'")
 
             if (exitCode == 0 && stdout.contains("Success")) {

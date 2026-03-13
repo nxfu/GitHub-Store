@@ -41,6 +41,7 @@ class ShizukuServiceManager(
     val status: StateFlow<ShizukuStatus> = _status.asStateFlow()
 
     private var serviceConnection: ServiceConnection? = null
+    private var boundUserServiceArgs: Shizuku.UserServiceArgs? = null
 
     @Volatile
     var installerService: IShizukuInstallerService? = null
@@ -207,6 +208,7 @@ class ShizukuServiceManager(
                 }
 
                 Logger.d(TAG) { "Calling Shizuku.bindUserService()..." }
+                boundUserServiceArgs = args
                 Shizuku.bindUserService(args, connection)
                 Logger.d(TAG) { "Shizuku.bindUserService() called, waiting for callback..." }
 
@@ -225,7 +227,18 @@ class ShizukuServiceManager(
     }
 
     private fun unbindService() {
+        val args = boundUserServiceArgs
+        val conn = serviceConnection
+        if (args != null && conn != null) {
+            try {
+                Shizuku.unbindUserService(args, conn, true)
+                Logger.d(TAG) { "Shizuku.unbindUserService() called" }
+            } catch (e: Exception) {
+                Logger.w(TAG) { "Failed to unbind Shizuku service: ${e.message}" }
+            }
+        }
         installerService = null
         serviceConnection = null
+        boundUserServiceArgs = null
     }
 }

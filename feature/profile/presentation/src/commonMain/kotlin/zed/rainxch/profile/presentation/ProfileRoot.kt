@@ -198,7 +198,7 @@ fun ProfileScreen(
             )
 
             item {
-                Spacer(Modifier.height(32.dp))
+                Spacer(Modifier.height(12.dp))
             }
 
             installationSection(
@@ -207,7 +207,7 @@ fun ProfileScreen(
             )
 
             item {
-                Spacer(Modifier.height(32.dp))
+                Spacer(Modifier.height(16.dp))
             }
 
             othersSection(
