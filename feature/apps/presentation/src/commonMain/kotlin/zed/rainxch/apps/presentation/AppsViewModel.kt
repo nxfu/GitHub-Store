@@ -21,6 +21,7 @@ import zed.rainxch.apps.presentation.model.UpdateAllProgress
 import zed.rainxch.apps.presentation.model.UpdateState
 import zed.rainxch.core.domain.logging.GitHubStoreLogger
 import zed.rainxch.core.domain.model.DeviceApp
+import zed.rainxch.core.domain.model.GithubAsset
 import zed.rainxch.core.domain.model.InstalledApp
 import zed.rainxch.core.domain.model.RateLimitException
 import zed.rainxch.core.domain.network.Downloader
@@ -90,7 +91,7 @@ class AppsViewModel(
                                     downloadProgress = existing?.downloadProgress,
                                     error = existing?.error,
                                 )
-                            }.sortedBy { it.installedApp.isUpdateAvailable }
+                            }.sortedByDescending { it.installedApp.isUpdateAvailable }
 
                     _state.update {
                         it.copy(
@@ -255,6 +256,26 @@ class AppsViewModel(
                         repoUrl = "",
                         repoValidationError = null,
                         fetchedRepoInfo = null,
+                        linkInstallableAssets = emptyList(),
+                        linkSelectedAsset = null,
+                        linkDownloadProgress = null,
+                    )
+                }
+            }
+
+            is AppsAction.OnLinkAssetSelected -> {
+                validateWithAsset(action.asset)
+            }
+
+            AppsAction.OnBackToEnterUrl -> {
+                _state.update {
+                    it.copy(
+                        linkStep = LinkStep.EnterUrl,
+                        linkInstallableAssets = emptyList(),
+                        linkSelectedAsset = null,
+                        linkDownloadProgress = null,
+                        linkValidationStatus = null,
+                        repoValidationError = null,
                     )
                 }
             }
@@ -722,7 +743,7 @@ class AppsViewModel(
                 _state.update { it.copy(deviceApps = deviceApps) }
             } catch (e: Exception) {
                 logger.error("Failed to load device apps: ${e.message}")
-                _events.send(AppsEvent.ShowError("Failed to load installed apps"))
+                _events.send(AppsEvent.ShowError(getString(Res.string.failed_to_load_apps)))
             }
         }
     }
@@ -738,6 +759,9 @@ class AppsViewModel(
                 repoUrl = "",
                 repoValidationError = null,
                 linkValidationStatus = null,
+                linkInstallableAssets = emptyList(),
+                linkSelectedAsset = null,
+                linkDownloadProgress = null,
                 fetchedRepoInfo = null,
                 isValidatingRepo = false,
             )
@@ -748,13 +772,15 @@ class AppsViewModel(
         val selectedApp = _state.value.selectedDeviceApp ?: return
         val url = _state.value.repoUrl.trim()
 
-        val (owner, repo) =
-            parseGithubUrl(url) ?: run {
-                _state.update { it.copy(repoValidationError = "Invalid GitHub URL. Use format: github.com/owner/repo") }
-                return
-            }
+        val parsed = parseGithubUrl(url)
 
         viewModelScope.launch {
+            if (parsed == null) {
+                _state.update { it.copy(repoValidationError = getString(Res.string.invalid_github_url)) }
+                return@launch
+            }
+
+            val (owner, repo) = parsed
             _state.update {
                 it.copy(
                     isValidatingRepo = true,
@@ -772,42 +798,73 @@ class AppsViewModel(
                         it.copy(
                             isValidatingRepo = false,
                             linkValidationStatus = null,
-                            repoValidationError = "Repository not found: $owner/$repo",
+                            repoValidationError = getString(Res.string.repo_not_found, owner, repo),
                         )
                     }
                     return@launch
                 }
 
-                val validationError = validateSigningFingerprint(selectedApp, owner, repo)
-                if (validationError != null) {
+                _state.update {
+                    it.copy(
+                        fetchedRepoInfo = repoInfo,
+                        linkValidationStatus = getString(Res.string.checking_release),
+                    )
+                }
+
+                val latestRelease =
+                    try {
+                        appsRepository.getLatestRelease(owner, repo)
+                    } catch (e: RateLimitException) {
+                        throw e
+                    } catch (e: Exception) {
+                        logger.debug("Could not fetch release for validation: ${e.message}")
+                        return@launch
+                    }
+
+                if (latestRelease == null) {
+                    appsRepository.linkAppToRepo(selectedApp, repoInfo)
                     _state.update {
                         it.copy(
                             isValidatingRepo = false,
                             linkValidationStatus = null,
-                            repoValidationError = validationError,
+                            showLinkSheet = false,
                         )
                     }
+                    _events.send(AppsEvent.AppLinkedSuccessfully(selectedApp.appName))
+                    _events.send(AppsEvent.ShowSuccess(getString(Res.string.app_linked_success, selectedApp.appName, repoInfo.owner, repoInfo.name)))
                     return@launch
                 }
 
-                appsRepository.linkAppToRepo(selectedApp, repoInfo)
+                val installableAssets =
+                    latestRelease.assets.filter { installer.isAssetInstallable(it.name) }
+                if (installableAssets.isEmpty()) {
+                    appsRepository.linkAppToRepo(selectedApp, repoInfo)
+                    _state.update {
+                        it.copy(
+                            isValidatingRepo = false,
+                            linkValidationStatus = null,
+                            showLinkSheet = false,
+                        )
+                    }
+                    _events.send(AppsEvent.AppLinkedSuccessfully(selectedApp.appName))
+                    _events.send(AppsEvent.ShowSuccess(getString(Res.string.app_linked_success, selectedApp.appName, repoInfo.owner, repoInfo.name)))
+                    return@launch
+                }
 
                 _state.update {
                     it.copy(
                         isValidatingRepo = false,
                         linkValidationStatus = null,
-                        showLinkSheet = false,
+                        linkStep = LinkStep.PickAsset,
+                        linkInstallableAssets = installableAssets,
                     )
                 }
-
-                _events.send(AppsEvent.AppLinkedSuccessfully(selectedApp.appName))
-                _events.send(AppsEvent.ShowSuccess("${selectedApp.appName} linked to ${repoInfo.owner}/${repoInfo.name}"))
             } catch (_: RateLimitException) {
                 _state.update {
                     it.copy(
                         isValidatingRepo = false,
                         linkValidationStatus = null,
-                        repoValidationError = "GitHub API rate limit exceeded. Try again later.",
+                        repoValidationError = getString(Res.string.rate_limit_try_again),
                     )
                 }
             } catch (e: Exception) {
@@ -816,91 +873,151 @@ class AppsViewModel(
                     it.copy(
                         isValidatingRepo = false,
                         linkValidationStatus = null,
-                        repoValidationError = "Failed to link: ${e.message}",
+                        repoValidationError = getString(Res.string.failed_to_link, e.message ?: ""),
                     )
                 }
             }
         }
     }
 
-    private suspend fun validateSigningFingerprint(
-        deviceApp: DeviceApp,
-        owner: String,
-        repo: String,
-    ): String? {
-        val latestRelease = try {
-            _state.update { it.copy(linkValidationStatus = getString(Res.string.checking_release)) }
-            appsRepository.getLatestRelease(owner, repo)
-        } catch (e: RateLimitException) {
-            throw e
-        } catch (e: Exception) {
-            logger.debug("Could not fetch release for validation: ${e.message}")
-            return null
-        }
+    private fun validateWithAsset(asset: GithubAsset) {
+        val selectedApp = _state.value.selectedDeviceApp ?: return
+        val repoInfo = _state.value.fetchedRepoInfo ?: return
 
-        if (latestRelease == null) return null
-
-        val installableAssets = latestRelease.assets.filter { installer.isAssetInstallable(it.name) }
-        if (installableAssets.isEmpty()) return null
-
-        val asset = installer.choosePrimaryAsset(installableAssets) ?: return null
-
-        _state.update { it.copy(linkValidationStatus = getString(Res.string.downloading_for_verification)) }
-
-        var filePath: String? = null
-        try {
-            downloader.download(asset.downloadUrl, asset.name).collect { /* progress tracked by spinner */ }
-
-            filePath = downloader.getDownloadedFilePath(asset.name) ?: return null
-
-            _state.update { it.copy(linkValidationStatus = getString(Res.string.verifying_signing_key)) }
-
-            val apkInfo = installer.getApkInfoExtractor().extractPackageInfo(filePath)
-            if (apkInfo == null) {
-                logger.debug("Could not extract APK info for validation")
-                return null
-            }
-
-            if (apkInfo.packageName != deviceApp.packageName) {
-                return getString(
-                    Res.string.package_name_mismatch,
-                    apkInfo.packageName,
-                    deviceApp.packageName,
+        viewModelScope.launch {
+            _state.update {
+                it.copy(
+                    linkSelectedAsset = asset,
+                    linkDownloadProgress = 0,
+                    linkValidationStatus = getString(Res.string.downloading_for_verification),
+                    repoValidationError = null,
                 )
             }
 
-            val deviceFingerprint = deviceApp.signingFingerprint
-            val apkFingerprint = apkInfo.signingFingerprint
-
-            if (deviceFingerprint != null && apkFingerprint != null && deviceFingerprint != apkFingerprint) {
-                return getString(Res.string.signing_key_mismatch_link)
-            }
-
-            return null
-        } finally {
+            var filePath: String? = null
             try {
-                if (filePath != null) File(filePath).delete()
-            } catch (_: Exception) { }
+                downloader.download(asset.downloadUrl, asset.name).collect { progress ->
+                    _state.update { it.copy(linkDownloadProgress = progress.percent) }
+                }
+
+                filePath = downloader.getDownloadedFilePath(asset.name)
+                if (filePath == null) {
+                    _state.update {
+                        it.copy(
+                            linkDownloadProgress = null,
+                            linkValidationStatus = null,
+                            repoValidationError = getString(Res.string.download_failed),
+                        )
+                    }
+                    return@launch
+                }
+
+                _state.update {
+                    it.copy(
+                        linkDownloadProgress = 100,
+                        linkValidationStatus = getString(Res.string.verifying_signing_key),
+                    )
+                }
+
+                val apkInfo = installer.getApkInfoExtractor().extractPackageInfo(filePath)
+                if (apkInfo == null) {
+                    logger.debug("Could not extract APK info for validation, linking anyway")
+                    appsRepository.linkAppToRepo(selectedApp, repoInfo)
+                    _state.update {
+                        it.copy(
+                            linkDownloadProgress = null,
+                            linkValidationStatus = null,
+                            showLinkSheet = false,
+                        )
+                    }
+                    _events.send(AppsEvent.AppLinkedSuccessfully(selectedApp.appName))
+                    _events.send(AppsEvent.ShowSuccess(getString(Res.string.app_linked_success, selectedApp.appName, repoInfo.owner, repoInfo.name)))
+                    return@launch
+                }
+
+                if (apkInfo.packageName != selectedApp.packageName) {
+                    _state.update {
+                        it.copy(
+                            linkDownloadProgress = null,
+                            linkValidationStatus = null,
+                            repoValidationError =
+                                getString(
+                                    Res.string.package_name_mismatch,
+                                    apkInfo.packageName,
+                                    selectedApp.packageName,
+                                ),
+                        )
+                    }
+                    return@launch
+                }
+
+                val deviceFingerprint = selectedApp.signingFingerprint
+                val apkFingerprint = apkInfo.signingFingerprint
+
+                if (deviceFingerprint != null && apkFingerprint != null && deviceFingerprint != apkFingerprint) {
+                    _state.update {
+                        it.copy(
+                            linkDownloadProgress = null,
+                            linkValidationStatus = null,
+                            repoValidationError = getString(Res.string.signing_key_mismatch_link),
+                        )
+                    }
+                    return@launch
+                }
+
+                appsRepository.linkAppToRepo(selectedApp, repoInfo)
+                _state.update {
+                    it.copy(
+                        linkDownloadProgress = null,
+                        linkValidationStatus = null,
+                        showLinkSheet = false,
+                    )
+                }
+                _events.send(AppsEvent.AppLinkedSuccessfully(selectedApp.appName))
+                _events.send(AppsEvent.ShowSuccess(getString(Res.string.app_linked_success, selectedApp.appName, repoInfo.owner, repoInfo.name)))
+            } catch (_: RateLimitException) {
+                _state.update {
+                    it.copy(
+                        linkDownloadProgress = null,
+                        linkValidationStatus = null,
+                        repoValidationError = getString(Res.string.rate_limit_try_again),
+                    )
+                }
+            } catch (e: Exception) {
+                logger.error("Failed to validate and link app: ${e.message}")
+                _state.update {
+                    it.copy(
+                        linkDownloadProgress = null,
+                        linkValidationStatus = null,
+                        repoValidationError = getString(Res.string.failed_to_link, e.message ?: ""),
+                    )
+                }
+            } finally {
+                try {
+                    if (filePath != null) File(filePath).delete()
+                } catch (_: Exception) {
+                }
+            }
         }
     }
 
     private fun parseGithubUrl(input: String): Pair<String, String>? {
-        val cleaned =
+        val normalized =
             input
                 .trim()
                 .removePrefix("https://")
                 .removePrefix("http://")
                 .removePrefix("www.")
-                .removePrefix("github.com/")
+                .substringBefore("?")
+                .substringBefore("#")
                 .removeSuffix("/")
-                .split("?")[0]
-                .split("#")[0]
 
-        val parts = cleaned.split("/")
-        if (parts.size < 2) return null
+        val parts = normalized.split("/")
+        if (parts.size < 3) return null
+        if (!parts[0].equals("github.com", ignoreCase = true)) return null
 
-        val owner = parts[0]
-        val repo = parts[1]
+        val owner = parts[1]
+        val repo = parts[2]
 
         if (owner.isBlank() || repo.isBlank()) return null
         if (owner.length > 39 || repo.length > 100) return null
@@ -918,7 +1035,7 @@ class AppsViewModel(
                 _events.send(AppsEvent.ExportReady(json))
             } catch (e: Exception) {
                 logger.error("Export failed: ${e.message}")
-                _events.send(AppsEvent.ShowError("Export failed: ${e.message}"))
+                _events.send(AppsEvent.ShowError(getString(Res.string.export_failed, e.message ?: "")))
             } finally {
                 _state.update { it.copy(isExporting = false) }
             }
@@ -942,14 +1059,14 @@ class AppsViewModel(
             _events.send(AppsEvent.ImportComplete(result))
             _events.send(
                 AppsEvent.ShowSuccess(
-                    "Imported ${result.imported} apps" +
-                        (if (result.skipped > 0) ", ${result.skipped} skipped" else "") +
-                        (if (result.failed > 0) ", ${result.failed} failed" else ""),
+                    getString(Res.string.imported_apps_summary, result.imported) +
+                        (if (result.skipped > 0) getString(Res.string.imported_skipped, result.skipped) else "") +
+                        (if (result.failed > 0) getString(Res.string.imported_failed, result.failed) else ""),
                 ),
             )
         } catch (e: Exception) {
             logger.error("Import failed: ${e.message}")
-            _events.send(AppsEvent.ShowError("Import failed: ${e.message}"))
+            _events.send(AppsEvent.ShowError(getString(Res.string.import_failed, e.message ?: "")))
         } finally {
             _state.update { it.copy(isImporting = false) }
         }
