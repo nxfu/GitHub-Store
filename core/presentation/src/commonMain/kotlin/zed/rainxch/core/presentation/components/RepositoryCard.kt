@@ -1,6 +1,5 @@
 package zed.rainxch.core.presentation.components
 
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -50,7 +49,13 @@ import zed.rainxch.core.presentation.theme.GithubStoreTheme
 import zed.rainxch.core.presentation.utils.formatReleasedAt
 import zed.rainxch.core.presentation.utils.hasWeekNotPassed
 import zed.rainxch.core.presentation.utils.toIcons
-import zed.rainxch.githubstore.core.presentation.res.*
+import zed.rainxch.githubstore.core.presentation.res.Res
+import zed.rainxch.githubstore.core.presentation.res.forked_repository
+import zed.rainxch.githubstore.core.presentation.res.home_view_details
+import zed.rainxch.githubstore.core.presentation.res.installed
+import zed.rainxch.githubstore.core.presentation.res.open_in_browser
+import zed.rainxch.githubstore.core.presentation.res.share_repository
+import zed.rainxch.githubstore.core.presentation.res.update_available
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class, ExperimentalLayoutApi::class)
 @Composable
@@ -106,9 +111,12 @@ fun RepositoryCard(
                 ) {
                     Row(
                         modifier =
-                            Modifier.clickable(onClick = {
-                                onDeveloperClick(discoveryRepositoryUi.repository.owner.login)
-                            }),
+                            Modifier
+                                .clip(CircleShape)
+                                .clickable(onClick = {
+                                    onDeveloperClick(discoveryRepositoryUi.repository.owner.login)
+                                })
+                                .padding(horizontal = 4.dp, vertical = 2.dp),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(12.dp),
                     ) {
@@ -116,7 +124,7 @@ fun RepositoryCard(
                             imageModel = { discoveryRepositoryUi.repository.owner.avatarUrl },
                             modifier =
                                 Modifier
-                                    .size(32.dp)
+                                    .size(40.dp)
                                     .clip(CircleShape),
                         )
 
@@ -131,7 +139,7 @@ fun RepositoryCard(
                     }
 
                     Text(
-                        text = "/ ${discoveryRepositoryUi.repository.name}",
+                        text = "/",
                         style = MaterialTheme.typography.titleMedium,
                         color = MaterialTheme.colorScheme.outline,
                         softWrap = false,
@@ -176,7 +184,7 @@ fun RepositoryCard(
                     )
                 }
 
-                Spacer(Modifier.height(16.dp))
+                Spacer(Modifier.height(8.dp))
 
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -234,7 +242,7 @@ fun RepositoryCard(
                     }
                 }
 
-                Spacer(Modifier.height(12.dp))
+                Spacer(Modifier.height(8.dp))
 
                 val releasedAtText =
                     buildAnnotatedString {
@@ -254,7 +262,7 @@ fun RepositoryCard(
                     overflow = TextOverflow.Ellipsis,
                 )
 
-                Spacer(Modifier.height(24.dp))
+                Spacer(Modifier.height(12.dp))
 
                 Row(
                     modifier = Modifier.fillMaxWidth(),
