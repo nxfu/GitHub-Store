@@ -5,6 +5,7 @@ import kotlinx.collections.immutable.persistentListOf
 import zed.rainxch.core.domain.model.InstalledApp
 import zed.rainxch.core.presentation.model.DiscoveryRepositoryUi
 import zed.rainxch.home.domain.model.HomeCategory
+import zed.rainxch.home.domain.model.HomePlatform
 
 data class HomeState(
     val repos: ImmutableList<DiscoveryRepositoryUi> = persistentListOf(),
@@ -16,4 +17,6 @@ data class HomeState(
     val currentCategory: HomeCategory = HomeCategory.TRENDING,
     val isAppsSectionVisible: Boolean = false,
     val isUpdateAvailable: Boolean = false,
+    val currentPlatform: HomePlatform = HomePlatform.All,
+    val isPlatformPopupVisible: Boolean = false,
 )

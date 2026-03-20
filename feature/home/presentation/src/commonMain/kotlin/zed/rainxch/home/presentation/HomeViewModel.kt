@@ -29,6 +29,7 @@ import zed.rainxch.githubstore.core.presentation.res.*
 import zed.rainxch.home.domain.model.HomeCategory
 import zed.rainxch.home.domain.model.HomePlatform
 import zed.rainxch.home.domain.repository.HomeRepository
+import zed.rainxch.home.presentation.HomeEvent.*
 
 class HomeViewModel(
     private val homeRepository: HomeRepository,
@@ -113,6 +114,7 @@ class HomeViewModel(
     private fun loadRepos(
         isInitial: Boolean = false,
         category: HomeCategory? = null,
+        platform: HomePlatform? = null,
     ): Job? {
         currentJob?.cancel()
 
@@ -126,6 +128,7 @@ class HomeViewModel(
         }
 
         val targetCategory = category ?: _state.value.currentCategory
+        val targetPlatform = platform ?: _state.value.currentPlatform
 
         logger.debug("Loading repos: category=$targetCategory, page=$nextPageIndex, isInitial=$isInitial")
 
@@ -137,6 +140,7 @@ class HomeViewModel(
                         isLoadingMore = !isInitial,
                         errorMessage = null,
                         currentCategory = targetCategory,
+                        currentPlatform = targetPlatform,
                         repos = if (isInitial) persistentListOf() else it.repos,
                     )
                 }
@@ -146,21 +150,21 @@ class HomeViewModel(
                         when (targetCategory) {
                             HomeCategory.TRENDING -> {
                                 homeRepository.getTrendingRepositories(
-                                    platform = HomePlatform.All,
+                                    platform = targetPlatform,
                                     page = nextPageIndex,
                                 )
                             }
 
                             HomeCategory.HOT_RELEASE -> {
                                 homeRepository.getHotReleaseRepositories(
-                                    platform = HomePlatform.All,
+                                    platform = targetPlatform,
                                     page = nextPageIndex,
                                 )
                             }
 
                             HomeCategory.MOST_POPULAR -> {
                                 homeRepository.getMostPopular(
-                                    platform = HomePlatform.All,
+                                    platform = targetPlatform,
                                     page = nextPageIndex,
                                 )
                             }
@@ -294,14 +298,35 @@ class HomeViewModel(
                     }.onFailure { t ->
                         logger.error("Failed to share link: ${t.message}")
                         _events.send(
-                            HomeEvent.OnMessage(getString(Res.string.failed_to_share_link)),
+                            OnMessage(getString(Res.string.failed_to_share_link)),
                         )
                         return@launch
                     }
 
                     if (platform != Platform.ANDROID) {
-                        _events.send(HomeEvent.OnMessage(getString(Res.string.link_copied_to_clipboard)))
+                        _events.send(OnMessage(getString(Res.string.link_copied_to_clipboard)))
                     }
+                }
+            }
+
+            is HomeAction.SwitchFilterPlatform -> {
+                if (_state.value.currentPlatform != action.platform) {
+                    nextPageIndex = 1
+                    switchCategoryJob?.cancel()
+                    switchCategoryJob =
+                        viewModelScope.launch {
+                            loadRepos(isInitial = true, platform = action.platform)?.join()
+                                ?: return@launch
+                            _events.send(HomeEvent.OnScrollToListTop)
+                        }
+                }
+            }
+
+            HomeAction.OnTogglePlatformPopup -> {
+                _state.update {
+                    it.copy(
+                        isPlatformPopupVisible = !it.isPlatformPopupVisible,
+                    )
                 }
             }
 
