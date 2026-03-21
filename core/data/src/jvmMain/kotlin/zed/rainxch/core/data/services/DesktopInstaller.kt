@@ -31,6 +31,19 @@ class DesktopInstaller(
         determineSystemArchitecture()
     }
 
+    /**
+     * Detects whether the app is running inside a Flatpak sandbox.
+     * Checks for the `/.flatpak-info` file which is always present inside Flatpak containers.
+     */
+    private val isRunningInFlatpak: Boolean by lazy {
+        try {
+            File("/.flatpak-info").exists() ||
+                System.getenv("FLATPAK_ID") != null
+        } catch (_: Exception) {
+            false
+        }
+    }
+
     override fun getApkInfoExtractor(): InstallerInfoExtractor = installerInfoExtractor
 
     override fun detectSystemArchitecture(): SystemArchitecture = systemArchitecture
@@ -65,6 +78,10 @@ class DesktopInstaller(
     override fun isAssetInstallable(assetName: String): Boolean {
         val name = assetName.lowercase()
 
+        // In Flatpak, only allow downloading — we can't actually install system packages.
+        // AppImages also can't run inside the sandbox (no FUSE).
+        // We still mark them as "installable" so the user can download them,
+        // but installation will hand off to the host system.
         val hasValidExtension =
             when (platform) {
                 Platform.ANDROID -> {
@@ -107,10 +124,21 @@ class DesktopInstaller(
                 }
 
                 Platform.LINUX -> {
-                    when (linuxPackageType) {
-                        LinuxPackageType.DEB -> listOf(".appimage", ".deb", ".rpm")
-                        LinuxPackageType.RPM -> listOf(".appimage", ".rpm", ".deb")
-                        LinuxPackageType.UNIVERSAL -> listOf(".appimage", ".deb", ".rpm")
+                    if (isRunningInFlatpak) {
+                        // In Flatpak, prefer native packages over AppImages since AppImages
+                        // need FUSE (unavailable in sandbox). The user will install from
+                        // their file manager on the host, where DEB/RPM work natively.
+                        when (linuxPackageType) {
+                            LinuxPackageType.DEB -> listOf(".deb", ".appimage", ".rpm")
+                            LinuxPackageType.RPM -> listOf(".rpm", ".appimage", ".deb")
+                            LinuxPackageType.UNIVERSAL -> listOf(".appimage", ".deb", ".rpm")
+                        }
+                    } else {
+                        when (linuxPackageType) {
+                            LinuxPackageType.DEB -> listOf(".appimage", ".deb", ".rpm")
+                            LinuxPackageType.RPM -> listOf(".appimage", ".rpm", ".deb")
+                            LinuxPackageType.UNIVERSAL -> listOf(".appimage", ".deb", ".rpm")
+                        }
                     }
                 }
             }
@@ -173,6 +201,17 @@ class DesktopInstaller(
     private fun determineLinuxPackageType(): LinuxPackageType {
         if (platform != Platform.LINUX) return LinuxPackageType.UNIVERSAL
 
+        // Inside Flatpak, /etc/os-release belongs to the runtime (org.freedesktop.Platform),
+        // not the host OS. We need to read the host's os-release instead.
+        if (isRunningInFlatpak) {
+            return try {
+                detectHostLinuxPackageType()
+            } catch (e: Exception) {
+                Logger.w { "Failed to detect host Linux package type from Flatpak: ${e.message}" }
+                LinuxPackageType.UNIVERSAL
+            }
+        }
+
         return try {
             val osRelease = tryReadOsRelease()
             if (osRelease != null) {
@@ -230,6 +269,43 @@ class DesktopInstaller(
             Logger.w { "Failed to detect Linux package type: ${e.message}" }
             LinuxPackageType.UNIVERSAL
         }
+    }
+
+    /**
+     * When running inside a Flatpak sandbox, /etc/os-release belongs to the Flatpak runtime
+     * (e.g. org.freedesktop.Platform), not the host OS. To detect the host distro we read
+     * /run/host/os-release, which Flatpak bind-mounts from the host.
+     */
+    private fun detectHostLinuxPackageType(): LinuxPackageType {
+        val hostOsRelease = File("/run/host/os-release")
+        if (!hostOsRelease.exists()) {
+            Logger.w { "Host os-release not available at /run/host/os-release" }
+            return LinuxPackageType.UNIVERSAL
+        }
+
+        val osRelease = parseOsRelease(hostOsRelease.readText())
+        val id = osRelease["ID"]?.lowercase() ?: ""
+        val idLike = osRelease["ID_LIKE"]?.lowercase() ?: ""
+
+        Logger.d { "Host distro detected from Flatpak: ID=$id, ID_LIKE=$idLike" }
+
+        if (id in listOf("debian", "ubuntu", "linuxmint", "pop", "elementary") ||
+            idLike.contains("debian") || idLike.contains("ubuntu")
+        ) {
+            Logger.d { "Host is Debian-based: $id" }
+            return LinuxPackageType.DEB
+        }
+
+        if (id in listOf("fedora", "rhel", "centos", "rocky", "almalinux", "opensuse", "suse") ||
+            idLike.contains("fedora") || idLike.contains("rhel") ||
+            idLike.contains("suse") || idLike.contains("centos")
+        ) {
+            Logger.d { "Host is RPM-based: $id" }
+            return LinuxPackageType.RPM
+        }
+
+        Logger.d { "Could not classify host distro, defaulting to UNIVERSAL" }
+        return LinuxPackageType.UNIVERSAL
     }
 
     private fun tryReadOsRelease(): Map<String, String>? {
@@ -317,6 +393,14 @@ class DesktopInstaller(
         withContext(Dispatchers.IO) {
             val ext = extOrMime.lowercase().removePrefix(".")
 
+            // In Flatpak we don't need to check executable permissions — we won't be
+            // running anything ourselves. The file is downloaded to xdg-download and
+            // the user installs from their host file manager.
+            if (isRunningInFlatpak) {
+                Logger.d { "Running in Flatpak — skipping permission checks for .$ext" }
+                return@withContext
+            }
+
             if (platform == Platform.LINUX && ext == "appimage") {
                 try {
                     val tempFile = File.createTempFile("appimage_perm_test", ".tmp")
@@ -361,11 +445,134 @@ class DesktopInstaller(
 
         val ext = extOrMime.lowercase().removePrefix(".")
 
+        // Inside the Flatpak sandbox we cannot:
+        // - Run pkexec/sudo (no privilege escalation)
+        // - Access system package managers (apt, dnf, rpm, etc.)
+        // - Mount AppImages (no FUSE / /dev/fuse)
+        // - Open terminal emulators (not in the sandbox)
+        // Instead, we open the downloaded file in the host's default file manager
+        // via the xdg-open portal, so the user can install it natively.
+        if (isRunningInFlatpak) {
+            installFromFlatpak(file, ext)
+            return@withContext
+        }
+
         when (platform) {
             Platform.WINDOWS -> installWindows(file, ext)
             Platform.MACOS -> installMacOS(file, ext)
             Platform.LINUX -> installLinux(file, ext)
             else -> throw UnsupportedOperationException("Installation not supported on $platform")
+        }
+    }
+
+    /**
+     * Flatpak-sandboxed installation flow.
+     *
+     * Since we can't execute system installers, we use xdg-open (which goes through
+     * the Flatpak portal to the host) to open the file with the host's default handler.
+     * This lets the host's software center / file manager handle the actual installation.
+     */
+    private fun installFromFlatpak(
+        file: File,
+        ext: String,
+    ) {
+        Logger.i { "Running in Flatpak sandbox — delegating installation to host system" }
+        Logger.i { "File: ${file.absolutePath} (.$ext)" }
+
+        when (ext) {
+            "deb", "rpm" -> {
+                // xdg-open goes through the Flatpak portal → opens on the host.
+                // On most distros, .deb/.rpm files open in GNOME Software, KDE Discover,
+                // or the default package installer.
+                Logger.d { "Opening .$ext package via xdg-open portal for host installation" }
+                try {
+                    val process = ProcessBuilder("xdg-open", file.absolutePath).start()
+                    val exitCode = process.waitFor()
+                    if (exitCode == 0) {
+                        Logger.i { "Package opened on host system for installation" }
+                        showFlatpakNotification(
+                            title = "Package Ready to Install",
+                            message = "The ${ext.uppercase()} package has been opened in your system's " +
+                                "software installer. Follow the prompts to complete installation.",
+                        )
+                    } else {
+                        Logger.w { "xdg-open exited with code $exitCode" }
+                        showFlatpakNotification(
+                            title = "Installation",
+                            message = "Downloaded to: ${file.absolutePath}\n" +
+                                "Please open this file with your software center to install.",
+                        )
+                    }
+                } catch (e: Exception) {
+                    Logger.w { "Failed to open file via xdg-open: ${e.message}" }
+                    showFlatpakNotification(
+                        title = "Download Complete",
+                        message = "Downloaded to: ${file.absolutePath}\n" +
+                            "Please install manually from your file manager.",
+                    )
+                }
+            }
+
+            "appimage" -> {
+                // AppImages can't run inside Flatpak (no FUSE), and there's no point
+                // moving them to ~/Applications from within the sandbox.
+                // Instead, set executable and tell the user where to find it.
+                Logger.d { "AppImage downloaded in Flatpak — preparing for host launch" }
+
+                // Try to make it executable (may work if it's on a filesystem we can chmod)
+                try {
+                    file.setExecutable(true, false)
+                    Logger.d { "Set executable permission on AppImage" }
+                } catch (e: Exception) {
+                    Logger.w { "Could not set executable permission: ${e.message}" }
+                }
+
+                showFlatpakNotification(
+                    title = "AppImage Downloaded",
+                    message = "Downloaded to: ${file.absolutePath}\n" +
+                        "Right-click → Properties → mark as executable, then double-click to run.\n" +
+                        "Or run from terminal: chmod +x '${file.name}' && ./'${file.name}'",
+                )
+            }
+
+            else -> {
+                // Fallback: try xdg-open for any other type
+                try {
+                    ProcessBuilder("xdg-open", file.absolutePath).start()
+                } catch (e: Exception) {
+                    Logger.w { "Could not open file: ${e.message}" }
+                }
+                showFlatpakNotification(
+                    title = "Download Complete",
+                    message = "Downloaded to: ${file.absolutePath}",
+                )
+            }
+        }
+    }
+
+    /**
+     * Show a notification from within the Flatpak sandbox.
+     * Uses notify-send which goes through the desktop notifications portal.
+     * Falls back to logging if notifications aren't available.
+     */
+    private fun showFlatpakNotification(
+        title: String,
+        message: String,
+    ) {
+        try {
+            ProcessBuilder(
+                "notify-send",
+                "--app-name=GitHub Store",
+                title,
+                message,
+                "-u",
+                "normal",
+                "-t",
+                "15000",
+            ).start()
+        } catch (e: Exception) {
+            Logger.w { "Could not show Flatpak notification: ${e.message}" }
+            Logger.i { "[$title] $message" }
         }
     }
 
