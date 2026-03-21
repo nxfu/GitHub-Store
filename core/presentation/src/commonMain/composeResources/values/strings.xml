@@ -444,6 +444,8 @@
     <string name="auth_hint_try_again">Please try signing in again to get a new code.</string>
     <string name="auth_hint_check_connection">Please check your internet connection and try again.</string>
     <string name="auth_hint_denied">You denied the authorization request. Try again if this was unintentional.</string>
+    <string name="auth_check_status">I already authorized</string>
+    <string name="auth_polling_status">Checking…</string>
 
     <!-- Read More / Show Less -->
     <string name="read_more">Read More</string>

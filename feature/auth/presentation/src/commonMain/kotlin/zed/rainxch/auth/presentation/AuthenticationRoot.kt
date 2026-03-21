@@ -16,6 +16,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.DoneAll
 import androidx.compose.material.icons.filled.OpenWith
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularWavyProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
@@ -23,6 +24,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -37,6 +39,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
@@ -48,8 +52,10 @@ import zed.rainxch.core.presentation.theme.GithubStoreTheme
 import zed.rainxch.core.presentation.utils.ObserveAsEvents
 import zed.rainxch.githubstore.core.presentation.res.Res
 import zed.rainxch.githubstore.core.presentation.res.app_icon
+import zed.rainxch.githubstore.core.presentation.res.auth_check_status
 import zed.rainxch.githubstore.core.presentation.res.auth_code_expires_in
 import zed.rainxch.githubstore.core.presentation.res.auth_error_with_message
+import zed.rainxch.githubstore.core.presentation.res.auth_polling_status
 import zed.rainxch.githubstore.core.presentation.res.continue_as_guest
 import zed.rainxch.githubstore.core.presentation.res.copy_code
 import zed.rainxch.githubstore.core.presentation.res.enter_code_on_github
@@ -70,6 +76,10 @@ fun AuthenticationRoot(
     viewModel: AuthenticationViewModel = koinViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
+        viewModel.onAction(AuthenticationAction.OnResumed)
+    }
 
     ObserveAsEvents(viewModel.events) { event ->
         when (event) {
@@ -305,6 +315,32 @@ fun StateDevicePrompt(
                 )
             },
         )
+
+        Spacer(Modifier.height(12.dp))
+
+        OutlinedButton(
+            onClick = { onAction(AuthenticationAction.PollNow) },
+            enabled = !state.isPolling,
+            shape = RoundedCornerShape(16.dp),
+        ) {
+            Icon(
+                imageVector = Icons.Default.Refresh,
+                contentDescription = null,
+                modifier = Modifier.size(18.dp),
+            )
+
+            Spacer(Modifier.size(8.dp))
+
+            Text(
+                text =
+                    if (state.isPolling) {
+                        stringResource(Res.string.auth_polling_status)
+                    } else {
+                        stringResource(Res.string.auth_check_status)
+                    },
+                style = MaterialTheme.typography.bodyMedium,
+            )
+        }
 
         Spacer(Modifier.weight(2f))
     }

@@ -223,6 +223,61 @@ class AuthenticationRepositoryImpl(
         }
     }
 
+    override suspend fun pollDeviceTokenOnce(deviceCode: String): Result<GithubDeviceTokenSuccess?> =
+        withContext(Dispatchers.IO) {
+            val clientId = BuildKonfig.GITHUB_CLIENT_ID
+            try {
+                val res = GitHubAuthApi.pollDeviceToken(clientId, deviceCode)
+                val success = res.getOrNull()?.toDomain()
+
+                if (success != null) {
+                    logger.debug("✅ Single poll: Token received! Saving...")
+                    saveTokenWithVerification(success)
+                    Result.success(success)
+                } else {
+                    val error = res.exceptionOrNull()
+                    val errorMsg = (error?.message ?: "").lowercase()
+
+                    when {
+                        "authorization_pending" in errorMsg || "slow_down" in errorMsg -> {
+                            Result.success(null)
+                        }
+
+                        "access_denied" in errorMsg -> {
+                            Result.failure(
+                                Exception("Authentication was denied. Please try again if this was a mistake."),
+                            )
+                        }
+
+                        "expired_token" in errorMsg ||
+                            "expired_device_code" in errorMsg ||
+                            "token_expired" in errorMsg -> {
+                            Result.failure(
+                                Exception("Authorization code expired. Please try again."),
+                            )
+                        }
+
+                        "bad_verification_code" in errorMsg ||
+                            "incorrect_device_code" in errorMsg -> {
+                            Result.failure(
+                                Exception("Invalid verification code. Please restart authentication."),
+                            )
+                        }
+
+                        else -> {
+                            logger.debug("⚠️ Single poll unknown error: $errorMsg")
+                            Result.success(null)
+                        }
+                    }
+                }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                logger.debug("⚠️ Single poll network error: ${e.message}")
+                Result.success(null)
+            }
+        }
+
     private fun isNetworkError(errorMsg: String): Boolean =
         errorMsg.contains("unable to resolve") ||
             errorMsg.contains("no address") ||

@@ -6,4 +6,5 @@ data class AuthenticationState(
     val loginState: AuthLoginState = AuthLoginState.LoggedOut,
     val copied: Boolean = false,
     val info: String? = null,
+    val isPolling: Boolean = false,
 )

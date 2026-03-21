@@ -22,4 +22,8 @@ sealed interface AuthenticationAction {
     ) : AuthenticationAction
 
     data object SkipLogin : AuthenticationAction
+
+    data object PollNow : AuthenticationAction
+
+    data object OnResumed : AuthenticationAction
 }

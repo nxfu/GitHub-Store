@@ -10,4 +10,12 @@ interface AuthenticationRepository {
     suspend fun startDeviceFlow(): GithubDeviceStart
 
     suspend fun awaitDeviceToken(start: GithubDeviceStart): GithubDeviceTokenSuccess
+
+    /**
+     * Single poll attempt. Returns:
+     * - [Result.success] with non-null [GithubDeviceTokenSuccess] if user authorized
+     * - [Result.success] with null if authorization is still pending (keep polling)
+     * - [Result.failure] on terminal errors (denied, expired, invalid code)
+     */
+    suspend fun pollDeviceTokenOnce(deviceCode: String): Result<GithubDeviceTokenSuccess?>
 }
