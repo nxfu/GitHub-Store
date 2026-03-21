@@ -36,6 +36,7 @@ import zed.rainxch.core.domain.repository.InstalledAppsRepository
 import zed.rainxch.core.domain.repository.SeenReposRepository
 import zed.rainxch.core.domain.repository.StarredRepository
 import zed.rainxch.core.domain.repository.TweaksRepository
+import zed.rainxch.core.domain.system.InstallOutcome
 import zed.rainxch.core.domain.system.Installer
 import zed.rainxch.core.domain.system.PackageMonitor
 import zed.rainxch.core.domain.use_cases.SyncInstalledAppsUseCase
@@ -1192,7 +1193,7 @@ class DetailsViewModel(
                 }
         }
 
-        installer.install(filePath, ext)
+        val installOutcome = installer.install(filePath, ext)
 
         // Launch attestation check asynchronously (non-blocking)
         launchAttestationCheck(filePath)
@@ -1205,6 +1206,7 @@ class DetailsViewModel(
                 releaseTag = releaseTag,
                 isUpdate = isUpdate,
                 filePath = filePath,
+                installOutcome = installOutcome,
             )
         } else {
             viewModelScope.launch {
@@ -1394,6 +1396,7 @@ class DetailsViewModel(
         releaseTag: String,
         isUpdate: Boolean,
         filePath: String,
+        installOutcome: InstallOutcome = InstallOutcome.DELEGATED_TO_SYSTEM,
     ) {
         try {
             val repo = _state.value.repository ?: return
@@ -1455,7 +1458,7 @@ class DetailsViewModel(
                         releaseNotes = "",
                         systemArchitecture = installer.detectSystemArchitecture().name,
                         fileExtension = assetName.substringAfterLast('.', ""),
-                        isPendingInstall = true,
+                        isPendingInstall = installOutcome != InstallOutcome.COMPLETED,
                         installedVersionName = apkInfo.versionName,
                         installedVersionCode = apkInfo.versionCode,
                         latestVersionName = apkInfo.versionName,
