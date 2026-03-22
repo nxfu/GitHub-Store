@@ -12,6 +12,7 @@ import co.touchlab.kermit.Logger
 import zed.rainxch.core.domain.model.AssetArchitectureMatcher
 import zed.rainxch.core.domain.model.GithubAsset
 import zed.rainxch.core.domain.model.SystemArchitecture
+import zed.rainxch.core.domain.system.InstallOutcome
 import zed.rainxch.core.domain.system.Installer
 import zed.rainxch.core.domain.system.InstallerInfoExtractor
 import java.io.File
@@ -134,7 +135,7 @@ class AndroidInstaller(
     override suspend fun install(
         filePath: String,
         extOrMime: String,
-    ) {
+    ): InstallOutcome {
         val file = File(filePath)
         if (!file.exists()) {
             throw IllegalStateException("APK file not found: $filePath")
@@ -158,6 +159,8 @@ class AndroidInstaller(
         } else {
             throw IllegalStateException("No installer available on this device")
         }
+
+        return InstallOutcome.DELEGATED_TO_SYSTEM
     }
 
     override fun uninstall(packageName: String) {

@@ -9,6 +9,7 @@ import zed.rainxch.core.domain.model.AssetArchitectureMatcher
 import zed.rainxch.core.domain.model.GithubAsset
 import zed.rainxch.core.domain.model.Platform
 import zed.rainxch.core.domain.model.SystemArchitecture
+import zed.rainxch.core.domain.system.InstallOutcome
 import zed.rainxch.core.domain.system.Installer
 import zed.rainxch.core.domain.system.InstallerInfoExtractor
 import java.awt.Desktop
@@ -437,13 +438,14 @@ class DesktopInstaller(
     override suspend fun install(
         filePath: String,
         extOrMime: String,
-    ) = withContext(Dispatchers.IO) {
-        val file = File(filePath)
-        if (!file.exists()) {
-            throw IllegalStateException("File not found: $filePath")
-        }
+    ): InstallOutcome =
+        withContext(Dispatchers.IO) {
+            val file = File(filePath)
+            if (!file.exists()) {
+                throw IllegalStateException("File not found: $filePath")
+            }
 
-        val ext = extOrMime.lowercase().removePrefix(".")
+            val ext = extOrMime.lowercase().removePrefix(".")
 
         // Inside the Flatpak sandbox we cannot:
         // - Run pkexec/sudo (no privilege escalation)
@@ -457,13 +459,16 @@ class DesktopInstaller(
             return@withContext
         }
 
-        when (platform) {
-            Platform.WINDOWS -> installWindows(file, ext)
-            Platform.MACOS -> installMacOS(file, ext)
-            Platform.LINUX -> installLinux(file, ext)
-            else -> throw UnsupportedOperationException("Installation not supported on $platform")
+            when (platform) {
+                Platform.WINDOWS -> installWindows(file, ext)
+                Platform.MACOS -> installMacOS(file, ext)
+                Platform.LINUX -> installLinux(file, ext)
+                else -> throw UnsupportedOperationException("Installation not supported on $platform")
+            }
+
+            InstallOutcome.DELEGATED_TO_SYSTEM
         }
-    }
+
 
     /**
      * Flatpak-sandboxed installation flow.

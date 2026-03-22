@@ -11,6 +11,7 @@ import zed.rainxch.core.domain.model.GithubAsset
 import zed.rainxch.core.domain.model.InstallerType
 import zed.rainxch.core.domain.model.SystemArchitecture
 import zed.rainxch.core.domain.repository.TweaksRepository
+import zed.rainxch.core.domain.system.InstallOutcome
 import zed.rainxch.core.domain.system.Installer
 import zed.rainxch.core.domain.system.InstallerInfoExtractor
 
@@ -97,7 +98,7 @@ class ShizukuInstallerWrapper(
     override suspend fun install(
         filePath: String,
         extOrMime: String,
-    ) {
+    ): InstallOutcome {
         Logger.d(TAG) { "install() called — filePath=$filePath, extOrMime=$extOrMime" }
         Logger.d(TAG) { "cachedInstallerType=$cachedInstallerType, shizukuStatus=${shizukuServiceManager.status.value}" }
 
@@ -122,7 +123,7 @@ class ShizukuInstallerWrapper(
                     Logger.d(TAG) { "Shizuku installPackage() returned: $result" }
                     if (result == 0) {
                         Logger.d(TAG) { "Shizuku install SUCCEEDED for: $filePath" }
-                        return
+                        return InstallOutcome.COMPLETED
                     }
                     Logger.w(TAG) { "Shizuku install FAILED with code: $result, falling back to standard installer" }
                 } else {
@@ -137,7 +138,7 @@ class ShizukuInstallerWrapper(
 
         Logger.d(TAG) { "Using standard AndroidInstaller for: $filePath" }
         androidInstaller.ensurePermissionsOrThrow(extOrMime)
-        androidInstaller.install(filePath, extOrMime)
+        return androidInstaller.install(filePath, extOrMime)
     }
 
     override fun uninstall(packageName: String) {
