@@ -558,6 +558,9 @@
     <string name="liquid_glass_option_title">液态玻璃效果</string>
     <string name="liquid_glass_option_description">以流畅的玻璃质感提升界面外观</string>
 
+    <string name="scrollbar_option_title">滚动条</string>
+    <string name="scrollbar_option_description">在可滚动列表中显示滚动条（桌面）</string>
+
     <string name="hide_seen_title">隐藏已浏览的仓库</string>
     <string name="hide_seen_description">在发现信息流中隐藏你已经浏览过的仓库</string>
     <string name="clear_seen_history">清除浏览记录</string>

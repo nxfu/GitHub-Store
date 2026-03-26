@@ -558,6 +558,9 @@
     <string name="liquid_glass_option_title">Эффект жидкого стекла</string>
     <string name="liquid_glass_option_description">Улучшите интерфейс с помощью гладкого стеклянного оформления</string>
 
+    <string name="scrollbar_option_title">Полоса прокрутки</string>
+    <string name="scrollbar_option_description">Показывать полосу прокрутки в прокручиваемых списках (ПК)</string>
+
     <string name="hide_seen_title">Скрыть просмотренные репозитории</string>
     <string name="hide_seen_description">Скрыть уже просмотренные репозитории из лент обнаружения</string>
     <string name="clear_seen_history">Очистить историю просмотров</string>

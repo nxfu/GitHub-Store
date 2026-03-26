@@ -594,6 +594,9 @@
     <string name="liquid_glass_option_title">Effetto vetro liquido</string>
     <string name="liquid_glass_option_description">Migliora l\'interfaccia con un aspetto liscio simile al vetro</string>
 
+    <string name="scrollbar_option_title">Barra di scorrimento</string>
+    <string name="scrollbar_option_description">Mostra la barra di scorrimento nelle liste scorrevoli (desktop)</string>
+
     <string name="hide_seen_title">Nascondi repository visualizzati</string>
     <string name="hide_seen_description">Nascondi i repository già visualizzati dai feed di scoperta</string>
     <string name="clear_seen_history">Cancella cronologia visualizzazioni</string>

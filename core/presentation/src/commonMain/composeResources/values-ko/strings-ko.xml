@@ -592,6 +592,9 @@
     <string name="liquid_glass_option_title">리퀴드 글라스 효과</string>
     <string name="liquid_glass_option_description">매끄러운 유리 같은 외관으로 인터페이스를 향상시킵니다</string>
 
+    <string name="scrollbar_option_title">스크롤바</string>
+    <string name="scrollbar_option_description">스크롤 가능한 목록에 스크롤바 표시 (데스크톱)</string>
+
     <string name="hide_seen_title">본 저장소 숨기기</string>
     <string name="hide_seen_description">이미 본 저장소를 디스커버리 피드에서 숨깁니다</string>
     <string name="clear_seen_history">조회 기록 삭제</string>

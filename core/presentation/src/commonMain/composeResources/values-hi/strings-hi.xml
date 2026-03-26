@@ -593,6 +593,9 @@
     <string name="liquid_glass_option_title">लिक्विड ग्लास इफ़ेक्ट</string>
     <string name="liquid_glass_option_description">एक चिकने काँच जैसे रूप से इंटरफ़ेस को बेहतर बनाएं</string>
 
+    <string name="scrollbar_option_title">स्क्रॉलबार</string>
+    <string name="scrollbar_option_description">स्क्रॉल करने योग्य सूचियों में स्क्रॉलबार दिखाएँ (डेस्कटॉप)</string>
+
     <string name="hide_seen_title">देखे गए रिपॉजिटरी छुपाएँ</string>
     <string name="hide_seen_description">पहले से देखे गए रिपॉजिटरी को डिस्कवरी फ़ीड से छुपाएँ</string>
     <string name="clear_seen_history">देखने का इतिहास साफ़ करें</string>

@@ -594,6 +594,9 @@
     <string name="liquid_glass_option_title">লিকুইড গ্লাস ইফেক্ট</string>
     <string name="liquid_glass_option_description">একটি মসৃণ কাচের মতো চেহারা দিয়ে ইন্টারফেস উন্নত করুন</string>
 
+    <string name="scrollbar_option_title">স্ক্রলবার</string>
+    <string name="scrollbar_option_description">স্ক্রলযোগ্য তালিকায় স্ক্রলবার দেখান (ডেস্কটপ)</string>
+
     <string name="hide_seen_title">দেখা রিপোজিটরি লুকান</string>
     <string name="hide_seen_description">আপনি ইতিমধ্যে দেখেছেন এমন রিপোজিটরি আবিষ্কার ফিড থেকে লুকান</string>
     <string name="clear_seen_history">দেখার ইতিহাস মুছুন</string>

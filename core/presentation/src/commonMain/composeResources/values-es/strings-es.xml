@@ -555,6 +555,9 @@
     <string name="liquid_glass_option_title">Efecto de cristal líquido</string>
     <string name="liquid_glass_option_description">Mejora la interfaz con una apariencia suave tipo cristal</string>
 
+    <string name="scrollbar_option_title">Barra de desplazamiento</string>
+    <string name="scrollbar_option_description">Mostrar barra de desplazamiento en listas desplazables (escritorio)</string>
+
     <string name="hide_seen_title">Ocultar repositorios vistos</string>
     <string name="hide_seen_description">Ocultar repositorios que ya has visto de las fuentes de descubrimiento</string>
     <string name="clear_seen_history">Borrar historial de vistos</string>

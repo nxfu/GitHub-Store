@@ -558,6 +558,9 @@
     <string name="liquid_glass_option_title">Efekt płynnego szkła</string>
     <string name="liquid_glass_option_description">Ulepsz interfejs o gładki, szklany wygląd</string>
 
+    <string name="scrollbar_option_title">Pasek przewijania</string>
+    <string name="scrollbar_option_description">Pokaż pasek przewijania w przewijalnych listach (komputer)</string>
+
     <string name="hide_seen_title">Ukryj przeglądane repozytoria</string>
     <string name="hide_seen_description">Ukryj repozytoria, które już przeglądałeś, z kanałów odkrywania</string>
     <string name="clear_seen_history">Wyczyść historię przeglądania</string>
