@@ -39,4 +39,17 @@ data class InstalledAppEntity(
     val latestVersionCode: Long? = null,
     val latestReleasePublishedAt: String? = null,
     val includePreReleases: Boolean = false,
+    /**
+     * Per-app regex applied to asset (file) names. When non-null, only assets
+     * whose name matches the pattern are considered installable for this app.
+     * Used to track a single app inside a monorepo that ships multiple apps
+     * (e.g. `ente-auth.*` against `ente-io/ente`).
+     */
+    val assetFilterRegex: String? = null,
+    /**
+     * When true, the update checker walks backward through past releases until
+     * it finds one whose assets match [assetFilterRegex]. Required for
+     * monorepos where the latest release is for a *different* app.
+     */
+    val fallbackToOlderReleases: Boolean = false,
 )
