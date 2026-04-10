@@ -1,0 +1,365 @@
+package zed.rainxch.apps.presentation.components
+
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.FilterAlt
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Switch
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import kotlinx.collections.immutable.ImmutableList
+import org.jetbrains.compose.resources.stringResource
+import zed.rainxch.apps.presentation.AppsAction
+import zed.rainxch.apps.presentation.AppsState
+import zed.rainxch.apps.presentation.model.GithubAssetUi
+import zed.rainxch.githubstore.core.presentation.res.*
+
+/**
+ * Per-app advanced settings sheet for monorepo support. Shows:
+ *  - Asset filter (regex) text field with inline validation
+ *  - Fall-back-to-older-releases toggle
+ *  - **Live preview** of which assets in the latest matching release the
+ *    current draft would resolve to. This is the killer UX touch — users
+ *    can iterate on the regex and immediately see the effect without
+ *    having to save and run an update check.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun AdvancedAppSettingsBottomSheet(
+    state: AppsState,
+    onAction: (AppsAction) -> Unit,
+) {
+    val app = state.advancedSettingsApp ?: return
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+
+    ModalBottomSheet(
+        onDismissRequest = { onAction(AppsAction.OnDismissAdvancedSettings) },
+        sheetState = sheetState,
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp)
+                .padding(bottom = 24.dp),
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    imageVector = Icons.Default.FilterAlt,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                )
+                Spacer(Modifier.width(12.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = stringResource(Res.string.advanced_settings_title),
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
+                    )
+                    Text(
+                        text = "${app.repoOwner}/${app.repoName}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+            }
+
+            Spacer(Modifier.height(4.dp))
+
+            Text(
+                text = stringResource(Res.string.advanced_settings_description),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+
+            Spacer(Modifier.height(20.dp))
+
+            // === Asset filter ===
+            OutlinedTextField(
+                value = state.advancedFilterDraft,
+                onValueChange = { onAction(AppsAction.OnAdvancedFilterChanged(it)) },
+                modifier = Modifier.fillMaxWidth(),
+                label = { Text(stringResource(Res.string.asset_filter_label)) },
+                placeholder = { Text(stringResource(Res.string.asset_filter_placeholder)) },
+                leadingIcon = {
+                    Icon(Icons.Default.FilterAlt, contentDescription = null)
+                },
+                trailingIcon = {
+                    if (state.advancedFilterDraft.isNotEmpty()) {
+                        TextButton(onClick = { onAction(AppsAction.OnAdvancedClearFilter) }) {
+                            Text(stringResource(Res.string.clear))
+                        }
+                    }
+                },
+                singleLine = true,
+                isError = state.advancedFilterError != null,
+                supportingText = {
+                    Text(
+                        text =
+                            when {
+                                state.advancedFilterError != null ->
+                                    stringResource(Res.string.asset_filter_invalid)
+                                else -> stringResource(Res.string.asset_filter_help)
+                            },
+                        color =
+                            if (state.advancedFilterError != null) {
+                                MaterialTheme.colorScheme.error
+                            } else {
+                                MaterialTheme.colorScheme.onSurfaceVariant
+                            },
+                    )
+                },
+                enabled = !state.advancedSavingFilter,
+                shape = RoundedCornerShape(12.dp),
+            )
+
+            Spacer(Modifier.height(12.dp))
+
+            // === Fallback toggle ===
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = stringResource(Res.string.fallback_older_releases_title),
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Medium,
+                    )
+                    Text(
+                        text = stringResource(Res.string.fallback_older_releases_description),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                Switch(
+                    checked = state.advancedFallbackDraft,
+                    onCheckedChange = { onAction(AppsAction.OnAdvancedFallbackToggled(it)) },
+                    enabled = !state.advancedSavingFilter,
+                )
+            }
+
+            Spacer(Modifier.height(20.dp))
+            HorizontalDivider(
+                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f),
+            )
+            Spacer(Modifier.height(16.dp))
+
+            // === Live preview ===
+            PreviewSection(
+                isLoading = state.advancedPreviewLoading,
+                matchedAssets = state.advancedPreviewMatched,
+                matchedTag = state.advancedPreviewTag,
+                message = state.advancedPreviewMessage,
+                onRefresh = { onAction(AppsAction.OnAdvancedRefreshPreview) },
+            )
+
+            Spacer(Modifier.height(20.dp))
+
+            // === Save / cancel buttons ===
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                OutlinedButton(
+                    onClick = { onAction(AppsAction.OnDismissAdvancedSettings) },
+                    enabled = !state.advancedSavingFilter,
+                    modifier = Modifier.weight(1f),
+                    shape = RoundedCornerShape(12.dp),
+                ) {
+                    Text(stringResource(Res.string.cancel))
+                }
+                FilledTonalButton(
+                    onClick = { onAction(AppsAction.OnAdvancedSaveFilter) },
+                    enabled = !state.advancedSavingFilter && state.advancedFilterError == null,
+                    modifier = Modifier.weight(1f),
+                    shape = RoundedCornerShape(12.dp),
+                ) {
+                    if (state.advancedSavingFilter) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(18.dp),
+                            strokeWidth = 2.dp,
+                        )
+                        Spacer(Modifier.width(8.dp))
+                    }
+                    Text(
+                        text = stringResource(Res.string.advanced_save),
+                        fontWeight = FontWeight.Bold,
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun PreviewSection(
+    isLoading: Boolean,
+    matchedAssets: ImmutableList<GithubAssetUi>,
+    matchedTag: String?,
+    message: String?,
+    onRefresh: () -> Unit,
+) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(
+            imageVector = Icons.Default.Info,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.size(18.dp),
+        )
+        Spacer(Modifier.width(8.dp))
+        Text(
+            text = stringResource(Res.string.advanced_preview_title),
+            style = MaterialTheme.typography.titleSmall,
+            fontWeight = FontWeight.SemiBold,
+            modifier = Modifier.weight(1f),
+        )
+        IconButton(onClick = onRefresh, enabled = !isLoading) {
+            Icon(
+                imageVector = Icons.Default.Refresh,
+                contentDescription = stringResource(Res.string.advanced_preview_refresh),
+            )
+        }
+    }
+
+    Spacer(Modifier.height(4.dp))
+
+    when {
+        isLoading -> {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(80.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(28.dp),
+                    strokeWidth = 2.dp,
+                )
+            }
+        }
+
+        message == "no_match" -> {
+            Text(
+                text = stringResource(Res.string.advanced_preview_no_match),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.error,
+                modifier = Modifier.padding(vertical = 8.dp),
+            )
+        }
+
+        message == "preview_failed" || message == "save_failed" -> {
+            Text(
+                text = stringResource(Res.string.advanced_preview_failed),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.error,
+                modifier = Modifier.padding(vertical = 8.dp),
+            )
+        }
+
+        matchedAssets.isEmpty() -> {
+            Text(
+                text = stringResource(Res.string.advanced_preview_pending),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(vertical = 8.dp),
+            )
+        }
+
+        else -> {
+            if (matchedTag != null) {
+                Text(
+                    text =
+                        stringResource(
+                            Res.string.advanced_preview_release,
+                            matchedTag,
+                            matchedAssets.size,
+                        ),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.Medium,
+                )
+                Spacer(Modifier.height(6.dp))
+            }
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(min = 0.dp, max = 180.dp),
+            ) {
+                items(matchedAssets, key = { it.id }) { asset ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.CheckCircle,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(18.dp),
+                        )
+                        Spacer(Modifier.width(10.dp))
+                        Text(
+                            text = asset.name,
+                            style = MaterialTheme.typography.bodySmall,
+                            modifier = Modifier.weight(1f),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                        Text(
+                            text = formatPreviewSize(asset.size),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+private fun formatPreviewSize(bytes: Long): String =
+    when {
+        bytes >= 1_073_741_824 -> "%.1f GB".format(bytes / 1_073_741_824.0)
+        bytes >= 1_048_576 -> "%.1f MB".format(bytes / 1_048_576.0)
+        bytes >= 1_024 -> "%.1f KB".format(bytes / 1_024.0)
+        else -> "$bytes B"
+    }

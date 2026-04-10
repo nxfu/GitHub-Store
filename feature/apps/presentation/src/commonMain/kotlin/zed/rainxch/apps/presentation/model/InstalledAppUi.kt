@@ -36,4 +36,6 @@ data class InstalledAppUi(
     val latestVersionCode: Long? = null,
     val latestReleasePublishedAt: String? = null,
     val includePreReleases: Boolean = false,
+    val assetFilterRegex: String? = null,
+    val fallbackToOlderReleases: Boolean = false,
 )

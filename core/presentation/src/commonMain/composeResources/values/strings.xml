@@ -638,4 +638,24 @@
 
     <!-- Per-app pre-release toggle -->
     <string name="pre_releases">Pre-releases</string>
+
+    <!-- Monorepo support: per-app asset filter & older-release fallback -->
+    <string name="asset_filter_label">Asset filter</string>
+    <string name="asset_filter_placeholder">e.g. ente-auth</string>
+    <string name="asset_filter_help">Only assets matching this pattern (regex) will be installed. Useful for monorepos that ship multiple apps.</string>
+    <string name="asset_filter_invalid">Invalid regex</string>
+    <string name="asset_filter_no_match">No assets match this filter</string>
+    <string name="asset_filter_visible_count">Showing %1$d of %2$d assets</string>
+    <string name="fallback_older_releases_title">Fall back to older releases</string>
+    <string name="fallback_older_releases_description">Walk back through past releases until one matches the filter. Required for monorepos where the latest release belongs to a sibling app.</string>
+    <string name="advanced_settings_title">Advanced filter</string>
+    <string name="advanced_settings_description">Configure how this app is matched in the repository. Use these settings when the repo ships multiple apps.</string>
+    <string name="advanced_settings_open">Open advanced filter</string>
+    <string name="advanced_save">Save</string>
+    <string name="advanced_preview_title">Preview</string>
+    <string name="advanced_preview_refresh">Refresh preview</string>
+    <string name="advanced_preview_pending">Type a filter to preview matching assets.</string>
+    <string name="advanced_preview_no_match">No releases in the recent window contain matching assets. Try enabling fallback to older releases or adjusting the regex.</string>
+    <string name="advanced_preview_failed">Could not load preview. Check your connection and try again.</string>
+    <string name="advanced_preview_release">Matched in %1$s · %2$d asset(s)</string>
 </resources>

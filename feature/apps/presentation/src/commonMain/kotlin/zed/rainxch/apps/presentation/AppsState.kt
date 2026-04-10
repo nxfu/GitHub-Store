@@ -41,6 +41,22 @@ data class AppsState(
     val linkSelectedAsset: GithubAssetUi? = null,
     val linkDownloadProgress: Int? = null,
     val fetchedRepoInfo: GithubRepoInfoUi? = null,
+    /** Filter input on the PickAsset step. Live-narrows [linkInstallableAssets]. */
+    val linkAssetFilter: String = "",
+    /** Validation message for [linkAssetFilter] (invalid regex syntax). */
+    val linkAssetFilterError: String? = null,
+    /** Whether linking should also enable fallback-to-older-releases. */
+    val linkFallbackToOlder: Boolean = false,
+    // Per-app advanced settings (monorepo support)
+    val advancedSettingsApp: InstalledAppUi? = null,
+    val advancedFilterDraft: String = "",
+    val advancedFallbackDraft: Boolean = false,
+    val advancedFilterError: String? = null,
+    val advancedPreviewLoading: Boolean = false,
+    val advancedPreviewMatched: ImmutableList<GithubAssetUi> = persistentListOf(),
+    val advancedPreviewTag: String? = null,
+    val advancedPreviewMessage: String? = null,
+    val advancedSavingFilter: Boolean = false,
     // Export/Import
     val isExporting: Boolean = false,
     val isImporting: Boolean = false,
@@ -58,6 +74,24 @@ data class AppsState(
                             it.packageName.contains(deviceAppSearchQuery, ignoreCase = true)
                     }.toImmutableList()
             }
+
+    /**
+     * Live-filtered view of [linkInstallableAssets] for the link sheet's
+     * PickAsset step. When the filter is invalid we keep showing the full
+     * list so the user can still pick something — the error is surfaced via
+     * [linkAssetFilterError].
+     */
+    val filteredLinkAssets: ImmutableList<GithubAssetUi>
+        get() {
+            val raw = linkAssetFilter.trim()
+            if (raw.isEmpty()) return linkInstallableAssets
+            val regex =
+                runCatching { Regex(raw, RegexOption.IGNORE_CASE) }.getOrNull()
+                    ?: return linkInstallableAssets
+            return linkInstallableAssets
+                .filter { regex.containsMatchIn(it.name) }
+                .toImmutableList()
+        }
 }
 
 enum class LinkStep {

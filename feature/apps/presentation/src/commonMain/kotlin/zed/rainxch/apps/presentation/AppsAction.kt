@@ -60,8 +60,23 @@ sealed interface AppsAction {
     data class OnLinkAssetSelected(val asset: GithubAssetUi) : AppsAction
     data object OnBackToEnterUrl : AppsAction
 
+    /** Asset filter input on the link-sheet PickAsset step. */
+    data class OnLinkAssetFilterChanged(val filter: String) : AppsAction
+
+    /** Toggle for "fall back to older releases" on the link-sheet PickAsset step. */
+    data class OnLinkFallbackToggled(val enabled: Boolean) : AppsAction
+
     // Per-app pre-release toggle
     data class OnTogglePreReleases(val packageName: String, val enabled: Boolean) : AppsAction
+
+    // Per-app advanced settings sheet (monorepo)
+    data class OnOpenAdvancedSettings(val app: InstalledAppUi) : AppsAction
+    data object OnDismissAdvancedSettings : AppsAction
+    data class OnAdvancedFilterChanged(val filter: String) : AppsAction
+    data class OnAdvancedFallbackToggled(val enabled: Boolean) : AppsAction
+    data object OnAdvancedSaveFilter : AppsAction
+    data object OnAdvancedClearFilter : AppsAction
+    data object OnAdvancedRefreshPreview : AppsAction
 
     // Export/Import
     data object OnExportApps : AppsAction

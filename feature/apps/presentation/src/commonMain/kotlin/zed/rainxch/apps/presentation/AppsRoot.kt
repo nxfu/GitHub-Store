@@ -27,6 +27,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Cancel
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.FilterAlt
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Update
@@ -84,6 +85,7 @@ import kotlin.time.ExperimentalTime
 import kotlin.time.Instant
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
+import zed.rainxch.apps.presentation.components.AdvancedAppSettingsBottomSheet
 import zed.rainxch.apps.presentation.components.InstalledAppIcon
 import zed.rainxch.apps.presentation.components.LinkAppBottomSheet
 import zed.rainxch.apps.presentation.model.AppItem
@@ -99,6 +101,7 @@ import zed.rainxch.core.presentation.theme.GithubStoreTheme
 import zed.rainxch.core.presentation.utils.ObserveAsEvents
 import zed.rainxch.githubstore.core.presentation.res.Res
 import zed.rainxch.githubstore.core.presentation.res.add_by_link
+import zed.rainxch.githubstore.core.presentation.res.advanced_settings_open
 import zed.rainxch.githubstore.core.presentation.res.cancel
 import zed.rainxch.githubstore.core.presentation.res.check_for_updates
 import zed.rainxch.githubstore.core.presentation.res.checking
@@ -326,6 +329,14 @@ fun AppsScreen(
             )
         }
 
+        // Per-app advanced settings (monorepo filter / fallback)
+        if (state.advancedSettingsApp != null) {
+            AdvancedAppSettingsBottomSheet(
+                state = state,
+                onAction = onAction,
+            )
+        }
+
         // Uninstall confirmation dialog
         state.appPendingUninstall?.let { app ->
             AlertDialog(
@@ -506,6 +517,9 @@ fun AppsScreen(
                                         onTogglePreReleases = { enabled ->
                                             onAction(AppsAction.OnTogglePreReleases(appItem.installedApp.packageName, enabled))
                                         },
+                                        onAdvancedSettingsClick = {
+                                            onAction(AppsAction.OnOpenAdvancedSettings(appItem.installedApp))
+                                        },
                                         modifier =
                                             Modifier
                                                 .then(
@@ -597,6 +611,7 @@ fun AppItemCard(
     onUninstallClick: () -> Unit,
     onRepoClick: () -> Unit,
     onTogglePreReleases: (Boolean) -> Unit,
+    onAdvancedSettingsClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val app = appItem.installedApp
@@ -728,15 +743,47 @@ fun AppItemCard(
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-                Checkbox(
-                    checked = app.includePreReleases,
-                    onCheckedChange = onTogglePreReleases,
-                    enabled = !isBusy,
-                    modifier =
-                        Modifier.semantics {
-                            contentDescription = preReleaseString
+
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    // Subtle visual cue when a monorepo filter is active —
+                    // the icon tints to primary, so users can tell at a
+                    // glance which apps have an active filter without
+                    // having to open the sheet.
+                    val advancedFilterDescription =
+                        stringResource(Res.string.advanced_settings_open)
+                    val hasFilter =
+                        !app.assetFilterRegex.isNullOrBlank() || app.fallbackToOlderReleases
+                    IconButton(
+                        onClick = onAdvancedSettingsClick,
+                        enabled = !isBusy,
+                        modifier = Modifier.semantics {
+                            contentDescription = advancedFilterDescription
                         },
-                )
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.FilterAlt,
+                            contentDescription = null,
+                            tint =
+                                if (hasFilter) {
+                                    MaterialTheme.colorScheme.primary
+                                } else {
+                                    MaterialTheme.colorScheme.onSurfaceVariant
+                                },
+                        )
+                    }
+
+                    Checkbox(
+                        checked = app.includePreReleases,
+                        onCheckedChange = onTogglePreReleases,
+                        enabled = !isBusy,
+                        modifier =
+                            Modifier.semantics {
+                                contentDescription = preReleaseString
+                            },
+                    )
+                }
             }
 
             Spacer(Modifier.height(12.dp))

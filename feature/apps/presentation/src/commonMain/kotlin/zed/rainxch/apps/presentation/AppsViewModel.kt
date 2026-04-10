@@ -35,6 +35,7 @@ import zed.rainxch.core.domain.repository.InstalledAppsRepository
 import zed.rainxch.core.domain.repository.TweaksRepository
 import zed.rainxch.core.domain.system.Installer
 import zed.rainxch.core.domain.use_cases.SyncInstalledAppsUseCase
+import zed.rainxch.core.domain.util.AssetFilter
 import zed.rainxch.core.domain.utils.ShareManager
 import zed.rainxch.githubstore.core.presentation.res.*
 import java.io.File
@@ -57,6 +58,9 @@ class AppsViewModel(
     private val activeUpdates = mutableMapOf<String, Job>()
     private var updateAllJob: Job? = null
     private var lastAutoCheckTimestamp: Long = 0L
+
+    /** Debounced re-runs of the live preview in the advanced settings sheet. */
+    private var advancedPreviewJob: Job? = null
 
     private val _state = MutableStateFlow(AppsState())
     val state =
@@ -307,12 +311,72 @@ class AppsViewModel(
                         linkDownloadProgress = null,
                         linkValidationStatus = null,
                         repoValidationError = null,
+                        linkAssetFilter = "",
+                        linkAssetFilterError = null,
+                        linkFallbackToOlder = false,
                     )
                 }
             }
 
+            is AppsAction.OnLinkAssetFilterChanged -> {
+                onLinkAssetFilterChanged(action.filter)
+            }
+
+            is AppsAction.OnLinkFallbackToggled -> {
+                _state.update { it.copy(linkFallbackToOlder = action.enabled) }
+            }
+
             is AppsAction.OnTogglePreReleases -> {
                 togglePreReleases(action.packageName, action.enabled)
+            }
+
+            is AppsAction.OnOpenAdvancedSettings -> {
+                openAdvancedSettings(action.app)
+            }
+
+            AppsAction.OnDismissAdvancedSettings -> {
+                _state.update {
+                    it.copy(
+                        advancedSettingsApp = null,
+                        advancedFilterDraft = "",
+                        advancedFallbackDraft = false,
+                        advancedFilterError = null,
+                        advancedPreviewLoading = false,
+                        advancedPreviewMatched = persistentListOf(),
+                        advancedPreviewTag = null,
+                        advancedPreviewMessage = null,
+                        advancedSavingFilter = false,
+                    )
+                }
+                advancedPreviewJob?.cancel()
+                advancedPreviewJob = null
+            }
+
+            is AppsAction.OnAdvancedFilterChanged -> {
+                onAdvancedFilterChanged(action.filter)
+            }
+
+            is AppsAction.OnAdvancedFallbackToggled -> {
+                _state.update { it.copy(advancedFallbackDraft = action.enabled) }
+                schedulePreviewRefresh()
+            }
+
+            AppsAction.OnAdvancedSaveFilter -> {
+                saveAdvancedSettings()
+            }
+
+            AppsAction.OnAdvancedClearFilter -> {
+                _state.update {
+                    it.copy(
+                        advancedFilterDraft = "",
+                        advancedFilterError = null,
+                    )
+                }
+                schedulePreviewRefresh()
+            }
+
+            AppsAction.OnAdvancedRefreshPreview -> {
+                refreshAdvancedPreview()
             }
 
             AppsAction.OnExportApps -> {
@@ -386,6 +450,167 @@ class AppsViewModel(
                 installedAppsRepository.checkForUpdates(packageName)
             } catch (e: Exception) {
                 logger.error("Failed to toggle pre-releases for $packageName: ${e.message}")
+            }
+        }
+    }
+
+    private fun openAdvancedSettings(app: InstalledAppUi) {
+        _state.update {
+            it.copy(
+                advancedSettingsApp = app,
+                advancedFilterDraft = app.assetFilterRegex.orEmpty(),
+                advancedFallbackDraft = app.fallbackToOlderReleases,
+                advancedFilterError = null,
+                advancedPreviewLoading = true,
+                advancedPreviewMatched = persistentListOf(),
+                advancedPreviewTag = null,
+                advancedPreviewMessage = null,
+                advancedSavingFilter = false,
+            )
+        }
+        refreshAdvancedPreview()
+    }
+
+    private fun onAdvancedFilterChanged(value: String) {
+        val parseResult = AssetFilter.parse(value)
+        val errorKey = parseResult?.exceptionOrNull()?.let { "invalid" }
+        _state.update {
+            it.copy(
+                advancedFilterDraft = value,
+                advancedFilterError = errorKey,
+            )
+        }
+        if (errorKey == null) schedulePreviewRefresh()
+    }
+
+    /**
+     * Debounces preview refresh while the user is typing. We don't want to
+     * issue a fresh GitHub releases call on every keystroke — 350ms after
+     * input stops is plenty responsive without burning rate limit.
+     */
+    private fun schedulePreviewRefresh() {
+        advancedPreviewJob?.cancel()
+        advancedPreviewJob =
+            viewModelScope.launch {
+                delay(350)
+                refreshAdvancedPreview()
+            }
+    }
+
+    private fun refreshAdvancedPreview() {
+        val app = _state.value.advancedSettingsApp ?: return
+        val draftFilter = _state.value.advancedFilterDraft
+        val draftFallback = _state.value.advancedFallbackDraft
+
+        // Validate locally before hitting the network — invalid regex
+        // shows the error inline and aborts the preview.
+        val parseResult = AssetFilter.parse(draftFilter)
+        if (parseResult != null && parseResult.isFailure) {
+            _state.update {
+                it.copy(
+                    advancedPreviewLoading = false,
+                    advancedPreviewMatched = persistentListOf(),
+                    advancedPreviewTag = null,
+                    advancedPreviewMessage = null,
+                    advancedFilterError = "invalid",
+                )
+            }
+            return
+        }
+
+        advancedPreviewJob?.cancel()
+        advancedPreviewJob =
+            viewModelScope.launch {
+                _state.update { it.copy(advancedPreviewLoading = true) }
+                try {
+                    val preview =
+                        installedAppsRepository.previewMatchingAssets(
+                            owner = app.repoOwner,
+                            repo = app.repoName,
+                            regex = draftFilter.takeIf { it.isNotBlank() },
+                            includePreReleases = app.includePreReleases,
+                            fallbackToOlderReleases = draftFallback,
+                        )
+                    _state.update {
+                        it.copy(
+                            advancedPreviewLoading = false,
+                            advancedPreviewMatched =
+                                preview.matchedAssets
+                                    .map { asset -> asset.toUi() }
+                                    .toImmutableList(),
+                            advancedPreviewTag = preview.release?.tagName,
+                            advancedPreviewMessage =
+                                if (preview.matchedAssets.isEmpty() && preview.regexError == null) {
+                                    "no_match"
+                                } else {
+                                    null
+                                },
+                            advancedFilterError =
+                                if (preview.regexError != null) "invalid" else null,
+                        )
+                    }
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    logger.error("Failed to preview matching assets: ${e.message}")
+                    _state.update {
+                        it.copy(
+                            advancedPreviewLoading = false,
+                            advancedPreviewMatched = persistentListOf(),
+                            advancedPreviewTag = null,
+                            advancedPreviewMessage = "preview_failed",
+                        )
+                    }
+                }
+            }
+    }
+
+    private fun saveAdvancedSettings() {
+        val app = _state.value.advancedSettingsApp ?: return
+        val draftFilter = _state.value.advancedFilterDraft.trim()
+        val draftFallback = _state.value.advancedFallbackDraft
+
+        // Final regex validation — if it's broken we refuse to save.
+        val parseResult = AssetFilter.parse(draftFilter)
+        if (parseResult != null && parseResult.isFailure) {
+            _state.update { it.copy(advancedFilterError = "invalid") }
+            return
+        }
+
+        viewModelScope.launch {
+            _state.update { it.copy(advancedSavingFilter = true) }
+            try {
+                installedAppsRepository.setAssetFilter(
+                    packageName = app.packageName,
+                    regex = draftFilter.takeIf { it.isNotEmpty() },
+                    fallbackToOlderReleases = draftFallback,
+                )
+                // Re-run the update check immediately so the UI badge updates
+                // without waiting for the next periodic worker run.
+                installedAppsRepository.checkForUpdates(app.packageName)
+                _state.update {
+                    it.copy(
+                        advancedSettingsApp = null,
+                        advancedFilterDraft = "",
+                        advancedFallbackDraft = false,
+                        advancedFilterError = null,
+                        advancedPreviewLoading = false,
+                        advancedPreviewMatched = persistentListOf(),
+                        advancedPreviewTag = null,
+                        advancedPreviewMessage = null,
+                        advancedSavingFilter = false,
+                    )
+                }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                logger.error("Failed to save advanced settings: ${e.message}")
+                _state.update {
+                    it.copy(
+                        advancedSavingFilter = false,
+                        advancedPreviewMessage = "save_failed",
+                    )
+                }
             }
         }
     }
@@ -838,8 +1063,76 @@ class AppsViewModel(
                 linkDownloadProgress = null,
                 fetchedRepoInfo = null,
                 isValidatingRepo = false,
+                linkAssetFilter = "",
+                linkAssetFilterError = null,
+                linkFallbackToOlder = false,
             )
         }
+    }
+
+    private fun onLinkAssetFilterChanged(value: String) {
+        // Validate the regex on every keystroke so the user gets immediate
+        // feedback. The state's filteredLinkAssets getter falls back to the
+        // unfiltered list when the regex is invalid, so the picker stays
+        // usable even mid-typing.
+        val parseResult = AssetFilter.parse(value)
+        val error =
+            parseResult?.exceptionOrNull()?.let { _ ->
+                // Localized message comes from the UI layer; here we just
+                // signal that something is wrong.
+                "invalid"
+            }
+        _state.update {
+            it.copy(
+                linkAssetFilter = value,
+                linkAssetFilterError = error,
+            )
+        }
+    }
+
+    /**
+     * Picks a sensible default for the link-flow filter. Tries, in order:
+     *   1. The trailing segment of the package name (e.g. `io.ente.auth` → `auth`)
+     *   2. A token derived from the device app's display name (e.g.
+     *      `Ente Auth` → `auth`)
+     *   3. [AssetFilter.suggestFromAssetName] on the first asset
+     *
+     * Returns the first non-blank candidate that actually matches at least
+     * one of the available assets — otherwise null, which leaves the field
+     * empty so we don't pre-fill something useless.
+     */
+    private fun suggestFilterForLink(
+        deviceAppName: String,
+        packageName: String,
+        firstAssetName: String?,
+    ): String? {
+        val state = _state.value
+        val assets = state.linkInstallableAssets
+
+        fun candidateMatches(candidate: String): Boolean {
+            val regex =
+                runCatching { Regex(candidate, RegexOption.IGNORE_CASE) }.getOrNull()
+                    ?: return false
+            return assets.any { regex.containsMatchIn(it.name) }
+        }
+
+        // 1. Last package segment (commonly the most distinctive token).
+        val packageTail = packageName.substringAfterLast('.').lowercase()
+        if (packageTail.length >= 3 && candidateMatches(packageTail)) {
+            return packageTail
+        }
+
+        // 2. Significant words from the display name.
+        deviceAppName
+            .split(' ', '-', '_')
+            .map { it.lowercase().trim() }
+            .filter { it.length >= 3 }
+            .forEach { token ->
+                if (candidateMatches(token)) return token
+            }
+
+        // 3. Heuristic on the first asset name.
+        return firstAssetName?.let { AssetFilter.suggestFromAssetName(it) }
     }
 
     private fun validateAndLinkRepo() {
@@ -947,12 +1240,27 @@ class AppsViewModel(
                     return@launch
                 }
 
+                // Seed an auto-suggestion based on the device app's package
+                // name first, then fall back to the first installable asset.
+                // This makes monorepo linking nearly zero-effort: pick "Ente
+                // Auth" → the filter pre-fills with "auth" so the picker
+                // already shows just the relevant APKs.
+                val suggestedFilter =
+                    suggestFilterForLink(
+                        deviceAppName = selectedApp.appName,
+                        packageName = selectedApp.packageName,
+                        firstAssetName = installableAssets.firstOrNull()?.name,
+                    )
+
                 _state.update {
                     it.copy(
                         isValidatingRepo = false,
                         linkValidationStatus = null,
                         linkStep = LinkStep.PickAsset,
                         linkInstallableAssets = installableAssets,
+                        linkAssetFilter = suggestedFilter.orEmpty(),
+                        linkAssetFilterError = null,
+                        linkFallbackToOlder = false,
                     )
                 }
             } catch (_: RateLimitException) {
@@ -1018,7 +1326,12 @@ class AppsViewModel(
                 val apkInfo = installer.getApkInfoExtractor().extractPackageInfo(filePath)
                 if (apkInfo == null) {
                     logger.debug("Could not extract APK info for validation, linking anyway")
-                    appsRepository.linkAppToRepo(selectedApp.toDomain(), repoInfo.toDomain())
+                    appsRepository.linkAppToRepo(
+                    deviceApp = selectedApp.toDomain(),
+                    repoInfo = repoInfo.toDomain(),
+                    assetFilterRegex = _state.value.linkAssetFilter.takeIf { it.isNotBlank() },
+                    fallbackToOlderReleases = _state.value.linkFallbackToOlder,
+                )
                     _state.update {
                         it.copy(
                             linkDownloadProgress = null,
@@ -1070,7 +1383,12 @@ class AppsViewModel(
                     return@launch
                 }
 
-                appsRepository.linkAppToRepo(selectedApp.toDomain(), repoInfo.toDomain())
+                appsRepository.linkAppToRepo(
+                    deviceApp = selectedApp.toDomain(),
+                    repoInfo = repoInfo.toDomain(),
+                    assetFilterRegex = _state.value.linkAssetFilter.takeIf { it.isNotBlank() },
+                    fallbackToOlderReleases = _state.value.linkFallbackToOlder,
+                )
                 _state.update {
                     it.copy(
                         linkDownloadProgress = null,
