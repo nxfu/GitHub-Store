@@ -185,7 +185,8 @@ class CachedRepositoriesDataSourceImpl(
             }.awaitAll().filterNotNull()
         }
 
-        if (responses.isEmpty()) return@withContext null
+        // Only use backend result if all 4 platforms succeeded (mirrors fallback behavior)
+        if (responses.isEmpty() || responses.size < platforms.size) return@withContext null
 
         val merged = responses
             .asSequence()
@@ -266,7 +267,8 @@ class CachedRepositoriesDataSourceImpl(
             }.awaitAll().filterNotNull()
         }
 
-        if (responses.isEmpty()) return@withContext null
+        // Only use backend result if all 4 platforms succeeded (mirrors fallback behavior)
+        if (responses.isEmpty() || responses.size < platforms.size) return@withContext null
 
         val merged = responses
             .asSequence()

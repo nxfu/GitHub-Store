@@ -109,6 +109,9 @@ class SearchRepositoryImpl(
     ): PaginatedDiscoveryRepositories? {
         if (query.isBlank()) return null
 
+        // Backend doesn't support forks sorting — fall through to GitHub REST
+        if (sortBy == SortBy.MostForks) return null
+
         val platformSlug = when (platform) {
             DiscoveryPlatform.Android -> "android"
             DiscoveryPlatform.Windows -> "windows"
@@ -119,8 +122,8 @@ class SearchRepositoryImpl(
 
         val sort = when (sortBy) {
             SortBy.MostStars -> "stars"
-            SortBy.MostForks -> null
             SortBy.BestMatch -> "relevance"
+            SortBy.MostForks -> null // unreachable, guarded above
         }
 
         val offset = (page - 1) * BACKEND_PAGE_SIZE
@@ -240,6 +243,14 @@ class SearchRepositoryImpl(
             throw e
         } catch (e: CancellationException) {
             throw e
+        } catch (_: Exception) {
+            send(
+                PaginatedDiscoveryRepositories(
+                    repos = emptyList(),
+                    hasMore = false,
+                    nextPageIndex = page,
+                ),
+            )
         }
     }
 

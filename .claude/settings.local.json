@@ -14,7 +14,8 @@
       "Bash(./gradlew build *)",
       "Bash(./gradlew compileKotlinJvm compileDebugKotlinAndroid)",
       "Bash(./gradlew :core:data:compileKotlinJvm :feature:home:data:compileKotlinJvm :feature:search:data:compileKotlinJvm --rerun-tasks)",
-      "Bash(./gradlew :core:data:compileDebugKotlinAndroid :feature:home:data:compileDebugKotlinAndroid :feature:search:data:compileDebugKotlinAndroid --rerun-tasks)"
+      "Bash(./gradlew :core:data:compileDebugKotlinAndroid :feature:home:data:compileDebugKotlinAndroid :feature:search:data:compileDebugKotlinAndroid --rerun-tasks)",
+      "Bash(./gradlew :core:data:compileKotlinJvm :feature:home:data:compileKotlinJvm :feature:search:data:compileKotlinJvm :core:data:compileDebugKotlinAndroid :feature:home:data:compileDebugKotlinAndroid :feature:search:data:compileDebugKotlinAndroid --rerun-tasks)"
     ]
   }
 }
