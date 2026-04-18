@@ -34,6 +34,7 @@ import zed.rainxch.core.domain.repository.FavouritesRepository
 import zed.rainxch.core.domain.repository.InstalledAppsRepository
 import zed.rainxch.core.domain.repository.SeenReposRepository
 import zed.rainxch.core.domain.repository.StarredRepository
+import zed.rainxch.core.domain.repository.TelemetryRepository
 import zed.rainxch.core.domain.repository.TweaksRepository
 import zed.rainxch.core.domain.system.DownloadOrchestrator
 import zed.rainxch.core.domain.system.DownloadSpec
@@ -110,6 +111,7 @@ class DetailsViewModel(
     private val installationManager: InstallationManager,
     private val attestationVerifier: AttestationVerifier,
     private val downloadOrchestrator: DownloadOrchestrator,
+    private val telemetryRepository: TelemetryRepository,
 ) : ViewModel() {
     private var hasLoadedInitialData = false
     private var currentDownloadJob: Job? = null
@@ -145,6 +147,7 @@ class DetailsViewModel(
         viewModelScope.launch {
             try {
                 installer.uninstall(installedApp.packageName)
+                _state.value.repository?.id?.let { telemetryRepository.recordUninstalled(it) }
             } catch (e: Exception) {
                 logger.error("Failed to request uninstall for ${installedApp.packageName}: ${e.message}")
                 _events.send(
@@ -811,6 +814,9 @@ class DetailsViewModel(
     private fun openApp() {
         val installedApp = _state.value.installedApp ?: return
         val launched = installer.openApp(installedApp.packageName)
+        if (launched && platform == Platform.ANDROID) {
+            _state.value.repository?.id?.let { telemetryRepository.recordAppOpenedAfterInstall(it) }
+        }
         if (!launched) {
             viewModelScope.launch {
                 _events.send(
@@ -897,6 +903,12 @@ class DetailsViewModel(
                 val newFavoriteState = favouritesRepository.isFavoriteSync(repo.id)
                 _state.value = _state.value.copy(isFavourite = newFavoriteState)
 
+                if (newFavoriteState) {
+                    telemetryRepository.recordFavorited(repo.id)
+                } else {
+                    telemetryRepository.recordUnfavorited(repo.id)
+                }
+
                 _events.send(
                     element =
                         DetailsEvent.OnMessage(
@@ -960,6 +972,7 @@ class DetailsViewModel(
         viewModelScope.launch {
             try {
                 installer.uninstall(installedApp.packageName)
+                _state.value.repository?.id?.let { telemetryRepository.recordUninstalled(it) }
             } catch (e: Exception) {
                 logger.error("Failed to request uninstall for ${installedApp.packageName}: ${e.message}")
                 _events.send(
@@ -1321,6 +1334,7 @@ class DetailsViewModel(
         isUpdate: Boolean,
     ) {
         var installFired = false
+        var telemetryStartFired = false
         downloadOrchestrator.observe(packageKey).collect { entry ->
             if (entry == null) {
                 // Orchestrator dropped the entry (cancelled or
@@ -1364,6 +1378,14 @@ class DetailsViewModel(
                     // (Shizuku) or our own install fired below. Either
                     // way, surface the INSTALLING stage.
                     _state.value = _state.value.copy(downloadStage = DownloadStage.INSTALLING)
+
+                    if (!telemetryStartFired) {
+                        telemetryStartFired = true
+                        _state.value.repository?.id?.let { id ->
+                            telemetryRepository.recordReleaseDownloaded(id)
+                            telemetryRepository.recordInstallStarted(id)
+                        }
+                    }
                 }
 
                 OrchestratorStage.AwaitingInstall -> {
@@ -1384,6 +1406,13 @@ class DetailsViewModel(
                         tag = releaseTag,
                         result = LogResult.Downloaded,
                     )
+                    if (!telemetryStartFired) {
+                        telemetryStartFired = true
+                        _state.value.repository?.id?.let { id ->
+                            telemetryRepository.recordReleaseDownloaded(id)
+                            telemetryRepository.recordInstallStarted(id)
+                        }
+                    }
                     // Run the existing install dialog flow on the
                     // downloaded file. This is the unchanged
                     // validation + fingerprint + installer + DB save
@@ -1397,6 +1426,7 @@ class DetailsViewModel(
                             sizeBytes = sizeBytes,
                             releaseTag = releaseTag,
                         )
+                        _state.value.repository?.id?.let { telemetryRepository.recordInstallSucceeded(it) }
                         // Successful install — release the entry
                         // from the orchestrator so the apps row
                         // doesn't keep showing "ready to install".
@@ -1416,14 +1446,17 @@ class DetailsViewModel(
                             tag = releaseTag,
                             result = Error(t.message),
                         )
+                        _state.value.repository?.id?.let {
+                            telemetryRepository.recordInstallFailed(it, t.message)
+                        }
                     }
                 }
 
                 OrchestratorStage.Completed -> {
                     // Shizuku/AlwaysInstall path: orchestrator
-                    // installed silently. Surface success and clean
-                    // up. The DB sync happens via PackageEventReceiver
-                    // when Android fires PACKAGE_REPLACED.
+                    // installed silently. Persist the DB row here —
+                    // PackageEventReceiver only patches existing rows
+                    // and would skip a fresh Shizuku install.
                     _state.value = _state.value.copy(downloadStage = DownloadStage.IDLE)
                     currentAssetName = null
                     appendLog(
@@ -1432,6 +1465,40 @@ class DetailsViewModel(
                         tag = releaseTag,
                         result = if (isUpdate) LogResult.Updated else LogResult.Installed,
                     )
+                    _state.value.repository?.id?.let { telemetryRepository.recordInstallSucceeded(it) }
+
+                    if (platform == Platform.ANDROID) {
+                        val filePath = entry.filePath
+                        if (filePath != null) {
+                            runCatching {
+                                val validation = installationManager.validateApk(
+                                    filePath = filePath,
+                                    isUpdate = isUpdate,
+                                    trackedPackageName = _state.value.installedApp?.packageName,
+                                )
+                                if (validation is ApkValidationResult.Valid) {
+                                    saveInstalledAppToDatabase(
+                                        apkInfo = validation.apkInfo,
+                                        assetName = assetName,
+                                        assetUrl = downloadUrl,
+                                        assetSize = sizeBytes,
+                                        releaseTag = releaseTag,
+                                        isUpdate = isUpdate,
+                                        installOutcome = InstallOutcome.COMPLETED,
+                                    )
+                                } else {
+                                    logger.warn(
+                                        "Shizuku install completed but APK validation failed: $validation",
+                                    )
+                                }
+                            }.onFailure { t ->
+                                logger.error("Failed to persist Shizuku install: ${t.message}")
+                            }
+                        } else {
+                            logger.warn("Shizuku install completed but filePath is null; DB not updated")
+                        }
+                    }
+
                     downloadOrchestrator.dismiss(packageKey)
                     return@collect
                 }
@@ -1465,6 +1532,9 @@ class DetailsViewModel(
                         tag = releaseTag,
                         result = Error(entry.errorMessage),
                     )
+                    _state.value.repository?.id?.let {
+                        telemetryRepository.recordInstallFailed(it, entry.errorMessage)
+                    }
                     downloadOrchestrator.dismiss(packageKey)
                     return@collect
                 }
@@ -1644,6 +1714,14 @@ class DetailsViewModel(
                 ),
             )
         } else {
+            // Snapshot the installable list as the user saw it at install
+            // time — this is the reference the variant fingerprint is
+            // relative to (pinning "the same kind of APK" means the same
+            // choice among these specific siblings).
+            val installable = _state.value.installableAssets
+            val pickedIndex = installable
+                .indexOfFirst { it.name == assetName }
+                .takeIf { it >= 0 }
             val reloaded =
                 installationManager.saveNewInstalledApp(
                     SaveInstalledAppParams(
@@ -1655,6 +1733,8 @@ class DetailsViewModel(
                         releaseTag = releaseTag,
                         isPendingInstall = installOutcome != InstallOutcome.COMPLETED,
                         isFavourite = _state.value.isFavourite,
+                        siblingAssetCount = installable.size,
+                        pickedAssetIndex = pickedIndex,
                     ),
                 )
             _state.value = _state.value.copy(installedApp = reloaded)
@@ -2002,6 +2082,8 @@ class DetailsViewModel(
                         isComingFromUpdate = isComingFromUpdate,
                         isLiquidGlassEnabled = liquidGlassEnabled,
                     )
+
+                telemetryRepository.recordRepoViewed(repo.id)
 
                 observeInstalledApp(repo.id)
             } catch (e: RateLimitException) {

@@ -8,6 +8,7 @@ import zed.rainxch.core.domain.model.InstalledApp
 import zed.rainxch.core.domain.repository.FavouritesRepository
 import zed.rainxch.core.domain.repository.InstalledAppsRepository
 import zed.rainxch.core.domain.system.Installer
+import zed.rainxch.core.domain.util.AssetVariant
 import zed.rainxch.details.domain.model.ApkValidationResult
 import zed.rainxch.details.domain.model.FingerprintCheckResult
 import zed.rainxch.details.domain.model.SaveInstalledAppParams
@@ -64,6 +65,20 @@ class InstallationManagerImpl(
             val apkInfo = params.apkInfo
             val repo = params.repo
 
+            // Capture the user's variant pick as a fingerprint so the next
+            // update resolves to the same APK flavour. Returns null for
+            // single-asset releases or unparseable filenames — in that case
+            // the pin fields stay null and the resolver falls back to the
+            // platform auto-picker, same as before this fix.
+            val fingerprint =
+                AssetVariant.fingerprintFromPickedAsset(
+                    pickedAssetName = params.assetName,
+                    siblingAssetCount = params.siblingAssetCount,
+                )
+            val serializedTokens = fingerprint?.tokens?.let(AssetVariant::serializeTokens)
+            val pickedIndex = params.pickedAssetIndex?.takeIf { it >= 0 }
+            val siblingCount = params.siblingAssetCount.takeIf { it > 0 }
+
             val installedApp =
                 InstalledApp(
                     packageName = apkInfo.packageName,
@@ -97,6 +112,11 @@ class InstallationManagerImpl(
                     latestVersionName = apkInfo.versionName,
                     latestVersionCode = apkInfo.versionCode,
                     signingFingerprint = apkInfo.signingFingerprint,
+                    preferredAssetVariant = fingerprint?.variant,
+                    preferredAssetTokens = serializedTokens,
+                    assetGlobPattern = fingerprint?.glob,
+                    pickedAssetIndex = pickedIndex,
+                    pickedAssetSiblingCount = siblingCount,
                 )
 
             installedAppsRepository.saveInstalledApp(installedApp)

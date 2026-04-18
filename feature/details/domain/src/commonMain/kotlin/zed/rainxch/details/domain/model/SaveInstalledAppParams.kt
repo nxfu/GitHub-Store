@@ -12,4 +12,6 @@ data class SaveInstalledAppParams(
     val releaseTag: String,
     val isPendingInstall: Boolean,
     val isFavourite: Boolean,
+    val siblingAssetCount: Int,
+    val pickedAssetIndex: Int?,
 )
