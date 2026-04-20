@@ -11,6 +11,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
@@ -120,6 +121,27 @@ fun TweaksRoot(viewModel: TweaksViewModel = koinViewModel()) {
             TweaksEvent.OnYoudaoCredentialsSaved -> {
                 coroutineScope.launch {
                     snackbarState.showSnackbar(getString(Res.string.translation_youdao_saved))
+                }
+            }
+
+            TweaksEvent.OnAppLanguageChangeRequiresRestart -> {
+                coroutineScope.launch {
+                    val result =
+                        snackbarState.showSnackbar(
+                            message = getString(Res.string.language_restart_required),
+                            actionLabel = getString(Res.string.language_restart_action),
+                            withDismissAction = true,
+                        )
+                    if (result == SnackbarResult.ActionPerformed) {
+                        // Desktop-only path: `exitProcess` terminates
+                        // the JVM; the user reopens the app, at which
+                        // point `DesktopApp.main` reads the persisted
+                        // language and applies it before Compose
+                        // starts. On Android this event never fires —
+                        // `MainActivity` handles runtime changes via
+                        // `recreate()` directly.
+                        kotlin.system.exitProcess(0)
+                    }
                 }
             }
         }

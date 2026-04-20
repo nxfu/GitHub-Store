@@ -1,5 +1,6 @@
 package zed.rainxch.tweaks.presentation.components.sections
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -116,13 +117,16 @@ private fun LanguageDropdown(
 
     Box(modifier = Modifier.fillMaxWidth()) {
         // Anchor row — tappable area that shows the current value and
-        // toggles the menu. Sized like a standard OutlinedTextField so
-        // it reads as "pick one" rather than as static label text.
+        // toggles the menu. Uses a `surface`-tinted background so it
+        // reads as a pickable control against the parent card's
+        // `surfaceContainer`; the plain clickable row otherwise
+        // blends into the card.
         Row(
             modifier =
                 Modifier
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(12.dp))
+                    .background(MaterialTheme.colorScheme.surface)
                     .clickable { expanded = true }
                     .padding(horizontal = 16.dp, vertical = 14.dp),
             verticalAlignment = Alignment.CenterVertically,
@@ -150,6 +154,12 @@ private fun LanguageDropdown(
             expanded = expanded,
             onDismissRequest = { expanded = false },
             shape = RoundedCornerShape(20.dp),
+            // Default menu container is `surfaceContainer`, the same
+            // tone the parent `ElevatedCard` uses — the menu would
+            // visually dissolve into the card. Step up to
+            // `surfaceContainerHigh` so it reads as a distinct popup
+            // layer with the correct elevation contrast.
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
         ) {
             // Follow-system first — it's the default and users
             // escaping a wrong-language lock-in look for this first.
