@@ -7,6 +7,8 @@ import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.client.plugins.timeout
 import io.ktor.client.request.accept
 import io.ktor.client.request.forms.FormDataContent
+import io.ktor.client.request.get
+import io.ktor.client.request.header
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
 import io.ktor.client.statement.bodyAsText
@@ -16,6 +18,7 @@ import io.ktor.http.HttpStatusCode
 import io.ktor.http.Parameters
 import io.ktor.http.contentType
 import io.ktor.serialization.kotlinx.json.json
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
 import kotlinx.serialization.json.Json
 import zed.rainxch.core.data.dto.GithubDeviceStartDto
@@ -26,6 +29,12 @@ class BackendHttpException(
     val statusCode: Int,
     message: String,
 ) : Exception(message)
+
+sealed interface PatValidation {
+    data object Valid : PatValidation
+    data class Rejected(val reason: String) : PatValidation
+    data class Unreachable(val reason: String) : PatValidation
+}
 
 object GitHubAuthApi {
     private val json =
@@ -252,6 +261,46 @@ object GitHubAuthApi {
             }
         } catch (e: Exception) {
             Result.failure(e)
+        }
+    }
+
+    /**
+     * Validates a Personal Access Token by calling GitHub's `/user`
+     * endpoint with it. Three outcomes:
+     *
+     *   [PatValidation.Valid]   → 2xx response, token authenticates cleanly.
+     *   [PatValidation.Rejected] → 401 or 403, token is bad or revoked.
+     *   [PatValidation.Unreachable] → network/timeout, we couldn't ask.
+     *
+     * The `Unreachable` case is deliberately distinct from `Rejected`:
+     * many users paste a PAT precisely because their network can't
+     * reach GitHub reliably (China, corporate firewalls). Treating
+     * unreachable as a rejection would block the whole feature for
+     * exactly the people who need it most. Caller decides whether to
+     * save optimistically on `Unreachable`.
+     */
+    suspend fun validatePersonalAccessToken(token: String): PatValidation {
+        return try {
+            val res = http.get("https://api.github.com/user") {
+                accept(ContentType.Application.Json)
+                header(HttpHeaders.Authorization, "Bearer $token")
+                header(HttpHeaders.UserAgent, "GithubStore/1.0 (PAT-validate)")
+                timeout {
+                    requestTimeoutMillis = 10_000
+                    socketTimeoutMillis = 10_000
+                }
+            }
+            val status = res.status
+            when {
+                status.isSuccessLike() -> PatValidation.Valid
+                status == HttpStatusCode.Unauthorized -> PatValidation.Rejected("Bad credentials")
+                status == HttpStatusCode.Forbidden -> PatValidation.Rejected("Token lacks required permissions or is banned")
+                else -> PatValidation.Unreachable("HTTP ${status.value}")
+            }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            PatValidation.Unreachable(e.message ?: "network error")
         }
     }
 

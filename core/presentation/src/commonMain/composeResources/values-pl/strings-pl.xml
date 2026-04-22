@@ -692,4 +692,25 @@
     <string name="translation_youdao_app_secret">App Secret</string>
     <string name="translation_youdao_save">Zapisz poświadczenia</string>
     <string name="translation_youdao_saved">Poświadczenia Youdao zapisane</string>
+
+    <!-- Releases status card -->
+    <string name="releases_load_failed">Nie udało się załadować wydań</string>
+    <string name="releases_load_failed_description">Sprawdź połączenie i spróbuj ponownie.</string>
+    <string name="no_releases_published">Brak opublikowanych wydań</string>
+    <string name="loading_releases">Ładowanie wydań…</string>
+
+    <!-- Personal Access Token sign-in -->
+    <string name="pat_use_token_instead">Masz problem? Użyj Personal Access Token</string>
+    <string name="pat_sheet_title">Zaloguj się za pomocą Personal Access Token</string>
+    <string name="pat_sheet_description">Utwórz Personal Access Token (classic lub fine-grained) na urządzeniu z dostępem do GitHuba i wklej go poniżej. Wymagany jest dostęp do odczytu repozytoriów i Twojego profilu.</string>
+    <string name="pat_open_settings">Otwórz ustawienia tokenów GitHuba</string>
+    <string name="pat_input_label">Personal Access Token</string>
+    <string name="pat_input_placeholder">ghp_… lub github_pat_…</string>
+    <string name="pat_submit">Zaloguj się</string>
+    <string name="pat_cancel">Anuluj</string>
+    <string name="pat_show">Pokaż token</string>
+    <string name="pat_hide">Ukryj token</string>
+    <string name="pat_error_empty">Wklej token.</string>
+    <string name="pat_error_invalid_format">To nie wygląda na token GitHuba. Tokeny zaczynają się od ghp_ lub github_pat_.</string>
+    <string name="pat_error_generic">Nie udało się zapisać tokena. Spróbuj ponownie.</string>
 </resources>
