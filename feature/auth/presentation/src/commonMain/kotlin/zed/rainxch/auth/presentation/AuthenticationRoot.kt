@@ -69,6 +69,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
@@ -786,6 +787,7 @@ private fun PatSignInSheet(
                     if (isMasked) PasswordVisualTransformation() else VisualTransformation.None,
                 keyboardOptions =
                     KeyboardOptions(
+                        keyboardType = KeyboardType.Password,
                         autoCorrectEnabled = false,
                         capitalization = KeyboardCapitalization.None,
                     ),

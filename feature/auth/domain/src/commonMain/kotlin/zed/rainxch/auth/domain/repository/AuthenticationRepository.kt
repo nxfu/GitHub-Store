@@ -18,14 +18,27 @@ interface AuthenticationRepository {
 
     /**
      * Saves a user-supplied Personal Access Token as the active auth
-     * credential. No network validation at save time — an invalid or
-     * revoked token surfaces as a 401 on the first authenticated API
-     * call, identical to how expired device-flow tokens behave.
+     * credential.
+     *
+     * Validation flow:
+     *   1. Client-side format check (rejects obvious paste-errors).
+     *   2. Network-side check against GitHub's `/user` endpoint — if
+     *      GitHub returns 401/403 we reject and do NOT persist. If GitHub
+     *      is unreachable (timeout/DNS/block), we persist optimistically.
+     *      A bad-but-unreachable token will surface a 401 on the first
+     *      real authenticated call, same as any expired token.
      *
      * Use case: users on networks where the browser-side of device flow
      * (reaching `github.com/login/device`) is unreliable — they generate
      * a PAT on a device where GitHub works, paste it here, and skip the
-     * browser dance entirely.
+     * browser dance entirely. Unreachable-but-save-anyway is deliberate:
+     * the whole reason this feature exists is for users who can't reach
+     * GitHub reliably in the moment.
+     *
+     * @return [Result.success] on persist, [Result.failure] on client-side
+     *   format error or GitHub-side 401/403 rejection. On [Result.failure]
+     *   the caller should keep the input sheet open so the user can fix
+     *   the token.
      */
     suspend fun signInWithPat(token: String): Result<Unit>
 }

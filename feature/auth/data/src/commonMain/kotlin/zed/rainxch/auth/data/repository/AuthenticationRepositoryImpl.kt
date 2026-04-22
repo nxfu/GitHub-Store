@@ -14,6 +14,7 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.withContext
 import zed.rainxch.auth.data.network.BackendHttpException
 import zed.rainxch.auth.data.network.GitHubAuthApi
+import zed.rainxch.auth.data.network.PatValidation
 import zed.rainxch.auth.domain.repository.AuthPath
 import zed.rainxch.auth.domain.repository.AuthenticationRepository
 import zed.rainxch.auth.domain.repository.DeviceFlowStart
@@ -338,14 +339,40 @@ class AuthenticationRepositoryImpl(
     override suspend fun signInWithPat(token: String): Result<Unit> =
         withContext(Dispatchers.IO) {
             val trimmed = token.trim()
-            // Format gatekeeping: trip the obvious paste-errors (trailing
-            // whitespace, partial copy) before we persist anything. Real
-            // validity is verified the first time the app makes an
-            // authenticated API call.
+            // Format gatekeeping first: trip the obvious paste-errors
+            // (trailing whitespace, partial copy) before even making a
+            // network call.
             if (!looksLikePat(trimmed)) {
                 return@withContext Result.failure(
                     IllegalArgumentException("Token format not recognized"),
                 )
+            }
+
+            // Network validation via GitHub's /user endpoint. Three
+            // outcomes: Valid → proceed, Rejected → fail immediately
+            // (don't persist a known-bad token), Unreachable → proceed
+            // optimistically. The Unreachable case is important: the
+            // whole reason users use this flow is that their network
+            // can't reliably reach github.com. Blocking the save on
+            // unreachability would defeat the feature for China users.
+            // A bad-but-couldn't-validate token will still surface a
+            // 401 on the first authenticated API call, and the existing
+            // 401 handler will clear it cleanly.
+            when (val validation = GitHubAuthApi.validatePersonalAccessToken(trimmed)) {
+                is PatValidation.Valid -> {
+                    logger.debug("PAT network-validated against GitHub /user")
+                }
+                is PatValidation.Rejected -> {
+                    logger.warn("PAT rejected by GitHub: ${validation.reason}")
+                    return@withContext Result.failure(
+                        IllegalStateException(validation.reason),
+                    )
+                }
+                is PatValidation.Unreachable -> {
+                    logger.debug(
+                        "PAT validation unreachable (${validation.reason}), saving optimistically",
+                    )
+                }
             }
 
             val dto = GithubDeviceTokenSuccessDto(
@@ -371,22 +398,20 @@ class AuthenticationRepositoryImpl(
         }
 
     /**
-     * Accepts the two current GitHub PAT shapes:
+     * Accepts the two PAT shapes users can create from GitHub's UI:
      *   - classic:        `ghp_` + ~36 chars
      *   - fine-grained:   `github_pat_` + ~82 chars
-     * Also accepts legacy/server tokens (`ghs_`, `gho_`) for completeness
-     * in case someone pastes one. Intentionally lenient on length so a
-     * future GitHub format bump doesn't silently lock the app out.
+     *
+     * Deliberately rejects GitHub App / OAuth tokens (`ghs_`, `gho_`,
+     * `ghu_`, `ghr_`) — they can authenticate but have different
+     * expiry/refresh semantics than PATs and would need separate
+     * handling to be safe here. Length check is lenient on purpose so
+     * a future GitHub format bump doesn't silently lock us out.
      */
     private fun looksLikePat(token: String): Boolean {
         if (token.length < 20) return false
         if (token.any { it.isWhitespace() }) return false
-        return token.startsWith("ghp_") ||
-            token.startsWith("github_pat_") ||
-            token.startsWith("ghs_") ||
-            token.startsWith("gho_") ||
-            token.startsWith("ghu_") ||
-            token.startsWith("ghr_")
+        return token.startsWith("ghp_") || token.startsWith("github_pat_")
     }
 
     private fun Throwable.isAuthInfrastructureError(): Boolean =
