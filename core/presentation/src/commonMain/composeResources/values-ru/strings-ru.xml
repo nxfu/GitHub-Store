@@ -692,4 +692,25 @@
     <string name="translation_youdao_app_secret">App Secret</string>
     <string name="translation_youdao_save">Сохранить учётные данные</string>
     <string name="translation_youdao_saved">Учётные данные Youdao сохранены</string>
+
+    <!-- Releases status card -->
+    <string name="releases_load_failed">Не удалось загрузить релизы</string>
+    <string name="releases_load_failed_description">Проверьте подключение и попробуйте снова.</string>
+    <string name="no_releases_published">Релизы ещё не опубликованы</string>
+    <string name="loading_releases">Загрузка релизов…</string>
+
+    <!-- Personal Access Token sign-in -->
+    <string name="pat_use_token_instead">Проблемы со входом? Используйте Personal Access Token</string>
+    <string name="pat_sheet_title">Вход с Personal Access Token</string>
+    <string name="pat_sheet_description">Создайте токен на устройстве, где доступен GitHub, и вставьте его ниже. Требуются права <b>repo</b> и <b>read:user</b>.</string>
+    <string name="pat_open_settings">Открыть настройки токенов GitHub</string>
+    <string name="pat_input_label">Personal Access Token</string>
+    <string name="pat_input_placeholder">ghp_… или github_pat_…</string>
+    <string name="pat_submit">Войти</string>
+    <string name="pat_cancel">Отмена</string>
+    <string name="pat_show">Показать токен</string>
+    <string name="pat_hide">Скрыть токен</string>
+    <string name="pat_error_empty">Вставьте токен.</string>
+    <string name="pat_error_invalid_format">Это не похоже на токен GitHub. Токены начинаются с <b>ghp_</b> или <b>github_pat_</b>.</string>
+    <string name="pat_error_generic">Не удалось сохранить токен. Попробуйте снова.</string>
 </resources>

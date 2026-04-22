@@ -724,4 +724,25 @@
     <string name="translation_youdao_app_secret">App Secret</string>
     <string name="translation_youdao_save">Salva credenziali</string>
     <string name="translation_youdao_saved">Credenziali Youdao salvate</string>
+
+    <!-- Releases status card -->
+    <string name="releases_load_failed">Impossibile caricare le release</string>
+    <string name="releases_load_failed_description">Controlla la connessione e riprova.</string>
+    <string name="no_releases_published">Nessuna release pubblicata</string>
+    <string name="loading_releases">Caricamento release…</string>
+
+    <!-- Personal Access Token sign-in -->
+    <string name="pat_use_token_instead">Problemi? Usa un Personal Access Token</string>
+    <string name="pat_sheet_title">Accedi con Personal Access Token</string>
+    <string name="pat_sheet_description">Crea un token su un dispositivo che può raggiungere GitHub, poi incollalo qui sotto. Sono richiesti gli scope <b>repo</b> e <b>read:user</b>.</string>
+    <string name="pat_open_settings">Apri impostazioni token GitHub</string>
+    <string name="pat_input_label">Personal Access Token</string>
+    <string name="pat_input_placeholder">ghp_… o github_pat_…</string>
+    <string name="pat_submit">Accedi</string>
+    <string name="pat_cancel">Annulla</string>
+    <string name="pat_show">Mostra token</string>
+    <string name="pat_hide">Nascondi token</string>
+    <string name="pat_error_empty">Incolla un token.</string>
+    <string name="pat_error_invalid_format">Non sembra un token GitHub. I token iniziano con <b>ghp_</b> o <b>github_pat_</b>.</string>
+    <string name="pat_error_generic">Impossibile salvare il token. Riprova.</string>
 </resources>

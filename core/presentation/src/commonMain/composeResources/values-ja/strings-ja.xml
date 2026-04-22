@@ -685,4 +685,25 @@
     <string name="translation_youdao_app_secret">App Secret</string>
     <string name="translation_youdao_save">認証情報を保存</string>
     <string name="translation_youdao_saved">Youdao の認証情報を保存しました</string>
+
+    <!-- Releases status card -->
+    <string name="releases_load_failed">リリースを読み込めませんでした</string>
+    <string name="releases_load_failed_description">接続を確認して再試行してください。</string>
+    <string name="no_releases_published">まだリリースはありません</string>
+    <string name="loading_releases">リリースを読み込み中…</string>
+
+    <!-- Personal Access Token sign-in -->
+    <string name="pat_use_token_instead">ログインできない場合は Personal Access Token を使用</string>
+    <string name="pat_sheet_title">Personal Access Token でログイン</string>
+    <string name="pat_sheet_description">GitHub にアクセスできる端末でトークンを作成し、以下に貼り付けてください。<b>repo</b> と <b>read:user</b> のスコープが必要です。</string>
+    <string name="pat_open_settings">GitHub のトークン設定を開く</string>
+    <string name="pat_input_label">Personal Access Token</string>
+    <string name="pat_input_placeholder">ghp_… または github_pat_…</string>
+    <string name="pat_submit">ログイン</string>
+    <string name="pat_cancel">キャンセル</string>
+    <string name="pat_show">トークンを表示</string>
+    <string name="pat_hide">トークンを非表示</string>
+    <string name="pat_error_empty">トークンを貼り付けてください。</string>
+    <string name="pat_error_invalid_format">GitHub のトークンではないようです。トークンは <b>ghp_</b> または <b>github_pat_</b> で始まります。</string>
+    <string name="pat_error_generic">トークンを保存できませんでした。もう一度お試しください。</string>
 </resources>

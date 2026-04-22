@@ -686,4 +686,25 @@
     <string name="translation_youdao_app_secret">App Secret</string>
     <string name="translation_youdao_save">保存凭据</string>
     <string name="translation_youdao_saved">有道凭据已保存</string>
+
+    <!-- Releases status card (#417 / #390 follow-up) -->
+    <string name="releases_load_failed">无法加载发布版本</string>
+    <string name="releases_load_failed_description">请检查网络连接后重试。</string>
+    <string name="no_releases_published">尚未发布任何版本</string>
+    <string name="loading_releases">正在加载发布版本…</string>
+
+    <!-- Personal Access Token sign-in (#433 follow-up) -->
+    <string name="pat_use_token_instead">遇到问题？使用 Personal Access Token</string>
+    <string name="pat_sheet_title">使用 Personal Access Token 登录</string>
+    <string name="pat_sheet_description">在能访问 GitHub 的任何设备上创建令牌，然后粘贴到下方。需要 <b>repo</b> 和 <b>read:user</b> 权限。</string>
+    <string name="pat_open_settings">打开 GitHub 令牌设置</string>
+    <string name="pat_input_label">Personal Access Token</string>
+    <string name="pat_input_placeholder">ghp_… 或 github_pat_…</string>
+    <string name="pat_submit">登录</string>
+    <string name="pat_cancel">取消</string>
+    <string name="pat_show">显示令牌</string>
+    <string name="pat_hide">隐藏令牌</string>
+    <string name="pat_error_empty">请粘贴令牌。</string>
+    <string name="pat_error_invalid_format">这不像是 GitHub 令牌。令牌以 <b>ghp_</b> 或 <b>github_pat_</b> 开头。</string>
+    <string name="pat_error_generic">保存令牌失败。请重试。</string>
 </resources>
