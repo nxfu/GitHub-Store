@@ -45,6 +45,7 @@ import org.koin.compose.viewmodel.koinViewModel
 import zed.rainxch.core.presentation.components.GithubStoreButton
 import zed.rainxch.core.presentation.components.ScrollbarContainer
 import zed.rainxch.core.presentation.locals.LocalScrollbarEnabled
+import zed.rainxch.core.presentation.utils.arrowKeyScroll
 import zed.rainxch.devprofile.domain.model.RepoFilterType
 import zed.rainxch.devprofile.presentation.components.DeveloperRepoItem
 import zed.rainxch.devprofile.presentation.components.FilterSortControls
@@ -133,7 +134,7 @@ fun DeveloperProfileScreen(
                     ) {
                         LazyColumn(
                             state = listState,
-                            modifier = Modifier.fillMaxSize(),
+                            modifier = Modifier.fillMaxSize().arrowKeyScroll(listState, autoFocus = true),
                             contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
                             verticalArrangement = Arrangement.spacedBy(12.dp),
                         ) {

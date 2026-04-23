@@ -2,7 +2,8 @@
   "permissions": {
     "allow": [
       "Bash(grep -r \"\\\\.FLATPAK\\\\|Flatpak\\\\|flatpak\" . --include=*.kt)",
-      "Bash(./gradlew *)"
+      "Bash(./gradlew *)",
+      "Bash(rtk find *)"
     ]
   }
 }

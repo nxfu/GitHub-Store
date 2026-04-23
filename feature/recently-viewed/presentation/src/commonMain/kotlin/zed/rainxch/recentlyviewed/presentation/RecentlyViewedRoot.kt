@@ -33,6 +33,7 @@ import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 import zed.rainxch.core.presentation.components.ScrollbarContainer
 import zed.rainxch.core.presentation.locals.LocalScrollbarEnabled
+import zed.rainxch.core.presentation.utils.arrowKeyScroll
 import zed.rainxch.githubstore.core.presentation.res.*
 import zed.rainxch.recentlyviewed.presentation.components.RecentlyViewedItem
 
@@ -103,7 +104,7 @@ fun RecentlyViewedScreen(
                     verticalItemSpacing = 12.dp,
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                     contentPadding = PaddingValues(horizontal = 8.dp, vertical = 12.dp),
-                    modifier = Modifier.fillMaxSize(),
+                    modifier = Modifier.fillMaxSize().arrowKeyScroll(gridState, autoFocus = true),
                 ) {
                     items(
                         items = state.repositories,

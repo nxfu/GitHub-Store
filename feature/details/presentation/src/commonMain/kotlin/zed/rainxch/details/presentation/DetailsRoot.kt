@@ -63,6 +63,7 @@ import zed.rainxch.core.presentation.components.ScrollbarContainer
 import zed.rainxch.core.presentation.locals.LocalScrollbarEnabled
 import zed.rainxch.core.presentation.theme.GithubStoreTheme
 import zed.rainxch.core.presentation.utils.ObserveAsEvents
+import zed.rainxch.core.presentation.utils.arrowKeyScroll
 import zed.rainxch.core.presentation.utils.isLiquidFrostAvailable
 import zed.rainxch.details.presentation.components.LanguagePicker
 import zed.rainxch.details.presentation.components.sections.about
@@ -426,6 +427,7 @@ fun DetailsScreen(
                                 .fillMaxHeight()
                                 .widthIn(max = 680.dp)
                                 .fillMaxWidth()
+                                .arrowKeyScroll(listState, autoFocus = true)
                                 .then(
                                     if (state.isLiquidGlassEnabled) {
                                         Modifier.liquefiable(liquidTopbarState)

@@ -93,6 +93,7 @@ import zed.rainxch.core.presentation.locals.LocalBottomNavigationLiquid
 import zed.rainxch.core.presentation.locals.LocalScrollbarEnabled
 import zed.rainxch.core.presentation.theme.GithubStoreTheme
 import zed.rainxch.core.presentation.utils.ObserveAsEvents
+import zed.rainxch.core.presentation.utils.arrowKeyScroll
 import zed.rainxch.githubstore.core.presentation.res.*
 import zed.rainxch.search.presentation.components.LanguageFilterBottomSheet
 import zed.rainxch.search.presentation.components.SearchHistorySection
@@ -595,6 +596,7 @@ fun SearchScreen(
                             modifier =
                                 Modifier
                                     .fillMaxSize()
+                                    .arrowKeyScroll(listState, autoFocus = false)
                                     .then(
                                         if (state.isLiquidGlassEnabled) {
                                             Modifier.liquefiable(liquidState)

@@ -51,6 +51,7 @@ import zed.rainxch.core.presentation.components.GithubStoreButton
 import zed.rainxch.core.presentation.components.ScrollbarContainer
 import zed.rainxch.core.presentation.locals.LocalScrollbarEnabled
 import zed.rainxch.core.presentation.theme.GithubStoreTheme
+import zed.rainxch.core.presentation.utils.arrowKeyScroll
 import zed.rainxch.githubstore.core.presentation.res.*
 import zed.rainxch.starred.presentation.components.StarredRepositoryItem
 import zed.rainxch.starred.presentation.utils.formatRelativeTime
@@ -164,7 +165,7 @@ fun StarredScreen(
                                 verticalItemSpacing = 12.dp,
                                 horizontalArrangement = Arrangement.spacedBy(12.dp),
                                 contentPadding = PaddingValues(horizontal = 8.dp, vertical = 12.dp),
-                                modifier = Modifier.fillMaxSize(),
+                                modifier = Modifier.fillMaxSize().arrowKeyScroll(gridState, autoFocus = true),
                             ) {
                                 items(
                                     items = state.starredRepositories,

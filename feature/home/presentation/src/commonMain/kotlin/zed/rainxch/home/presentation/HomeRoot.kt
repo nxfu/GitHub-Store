@@ -84,6 +84,7 @@ import zed.rainxch.core.presentation.locals.LocalBottomNavigationLiquid
 import zed.rainxch.core.presentation.locals.LocalScrollbarEnabled
 import zed.rainxch.core.presentation.theme.GithubStoreTheme
 import zed.rainxch.core.presentation.utils.ObserveAsEvents
+import zed.rainxch.core.presentation.utils.arrowKeyScroll
 import zed.rainxch.core.presentation.utils.isScrollingUp
 import zed.rainxch.core.presentation.utils.toIcons
 import zed.rainxch.core.presentation.utils.toLabel
@@ -394,7 +395,7 @@ private fun MainState(
                     top = 12.dp,
                     bottom = bottomNavHeight + 32.dp,
                 ),
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier.fillMaxSize().arrowKeyScroll(listState, autoFocus = true),
         ) {
             items(
                 items = visibleRepos,
