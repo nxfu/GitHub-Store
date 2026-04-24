@@ -12,6 +12,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import org.koin.android.ext.android.get
 import org.koin.android.ext.koin.androidContext
+import zed.rainxch.core.data.services.DownloadNotificationObserver
 import zed.rainxch.core.data.services.PackageEventReceiver
 import zed.rainxch.core.data.services.UpdateScheduler
 import zed.rainxch.core.domain.model.InstallSource
@@ -34,8 +35,16 @@ class GithubStoreApp : Application() {
 
         createNotificationChannels()
         registerPackageEventReceiver()
+        startDownloadNotificationObserver()
         scheduleBackgroundUpdateChecks()
         registerSelfAsInstalledApp()
+    }
+
+    private fun startDownloadNotificationObserver() {
+        // The observer translates orchestrator state into progress
+        // notifications (see #373). Kicked off here so it runs for the
+        // whole process lifetime — no ViewModel is involved.
+        get<DownloadNotificationObserver>().start(appScope)
     }
 
     private fun createNotificationChannels() {
@@ -61,6 +70,17 @@ class GithubStoreApp : Application() {
                 setShowBadge(false)
             }
         notificationManager.createNotificationChannel(serviceChannel)
+
+        val downloadsChannel =
+            NotificationChannel(
+                DOWNLOADS_CHANNEL_ID,
+                "Downloads",
+                NotificationManager.IMPORTANCE_LOW,
+            ).apply {
+                description = "Live progress for in-flight downloads"
+                setShowBadge(false)
+            }
+        notificationManager.createNotificationChannel(downloadsChannel)
     }
 
     private fun registerPackageEventReceiver() {
@@ -167,5 +187,6 @@ class GithubStoreApp : Application() {
             "https://raw.githubusercontent.com/OpenHub-Store/GitHub-Store/refs/heads/main/media-resources/app_icon.png"
         const val UPDATES_CHANNEL_ID = "app_updates"
         const val UPDATE_SERVICE_CHANNEL_ID = "update_service"
+        const val DOWNLOADS_CHANNEL_ID = "app_downloads"
     }
 }
