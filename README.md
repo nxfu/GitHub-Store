@@ -18,7 +18,7 @@
   <br/>
   <br/>
  <a href="https://github.com/OpenHub-Store/GitHub-Store/releases/latest">
-  <img src="https://api.github-store.org/v1/badge/OpenHub-Store/GitHub-Store/downloads/5/2" alt="Downloads"/>
+  <img src="https://api.github-store.org/v1/badge/OpenHub-Store/GitHub-Store/downloads/5/2?label=Downloads%20:" alt="Downloads"/>
 </a>
 <a href="https://github.com/OpenHub-Store/GitHub-Store/stargazers">
   <img src="https://m3-markdown-badges.vercel.app/stars/3/2/OpenHub-Store/GitHub-Store" alt="Stars"/>
@@ -27,7 +27,7 @@
   <img src="https://m3-markdown-badges.vercel.app/issues/1/2/OpenHub-Store/GitHub-Store" alt="Issues"/>
 </a>
 <a href="https://github.com/OpenHub-Store/GitHub-Store/releases/latest">
-  <img src="https://api.github-store.org/v1/badge/OpenHub-Store/GitHub-Store/release/9/1" alt="Latest release"/>
+  <img src="https://api.github-store.org/v1/badge/OpenHub-Store/GitHub-Store/release/9/1?label=Latest%20version%20:" alt="Latest release"/>
 </a>
 </p>
 
@@ -120,7 +120,11 @@ winget install zed.rainxch.githubstore
 
 ---
 
+<div align="center">
+  
 ## 🚀 Features
+
+</div>
 
 - **Smart discovery**
     - Home sections for "Trending", "Hot Release", and "Most Popular" projects with time‑based filters.
@@ -177,7 +181,11 @@ winget install zed.rainxch.githubstore
 
 ---
 
-## FAQ
+<div align="center">
+
+  ## FAQ
+  
+</div>
 
 <details>
 <summary><strong>🔍 How does my app appear in GitHub Store?</strong></summary>
@@ -244,7 +252,11 @@ automatically—no manual submission required.
 
 ---
 
+<div align="center">
+  
 ## 🏆 Featured In
+
+</div>
 
 <p align="center">
   <a href="https://www.youtube.com/@howtomen">
@@ -258,7 +270,11 @@ automatically—no manual submission required.
 
 ---
 
+<div align="center">
+  
 ## 📺 Meet the Developer
+
+</div> 
 
 I made a video introducing myself and sharing what's next for GitHub Store.
 
@@ -270,7 +286,11 @@ Help shape the future of GitHub Store — take this 2-minute survey:
 
 ---
 
+<div align="center">
+  
 ## 💬 Discord
+
+</div>
 
 You can submit any feedback in our [discord server](https://discord.gg/NBW4zeFcG6)
 
@@ -282,7 +302,11 @@ You can submit any feedback in our [discord server](https://discord.gg/NBW4zeFcG
 
 ---
 
+<div align="center">
+  
 ## 🔐 GitHub Store APK Signing Certificate
+
+</div>
 
 All official GitHub Store releases are signed with the following certificate fingerprint:
 
@@ -291,7 +315,11 @@ SHA-256:
 
 ---
 
+<div align="center">
+  
 ## 🔑 GitHub OAuth Configuration
+
+</div>
 
 **TL;DR**
 1. Create a GitHub OAuth App
@@ -343,7 +371,11 @@ Sync the project and run the app. You should now be able to sign in with GitHub.
 
 ---
 
+<div align="center">
+  
 ## 📔 Wiki & Resources
+
+</div>
 
 Check out GitHub Store [Wiki](https://github.com/OpenHub-Store/GitHub-Store/wiki) for FAQ and useful information
 
@@ -353,7 +385,11 @@ Check out GitHub Store [Wiki](https://github.com/OpenHub-Store/GitHub-Store/wiki
 
 ---
 
+<div align="center">
+  
 ## ❤️ Support This Project
+
+</div>
 
 GitHub Store is 100% free. No ads. No tracking.
 
@@ -364,7 +400,11 @@ GitHub Store is 100% free. No ads. No tracking.
 
 ---
 
+<div align="center">
+  
 ## 💼 Business Inquiries
+
+</div>
 
 GitHub Store is open to partnerships, sponsorships, and integrations.
 
@@ -375,7 +415,11 @@ If you're interested in working together, reach out:
 
 ---
 
+<div align="center">
+  
 ## 📋 Legal Notice
+
+</div>
 
 GitHub Store is an independent, open-source project not affiliated with GitHub, Inc.
 The name describes the app's functionality (discovering GitHub releases) and does not imply trademark ownership.
@@ -383,8 +427,11 @@ GitHub® is a registered trademark of GitHub, Inc.
 
 ---
 
+<div align="center">
+  
 ## ⚠️ Disclaimer
 
+</div>
 GitHub Store only helps you discover and download release assets that are already published on
 GitHub by third‑party developers.
 The contents, safety, and behavior of those downloads are entirely the responsibility of their
@@ -397,7 +444,11 @@ fit for any particular purpose.
 
 ---
 
-## Star History
+<div align="center">
+  
+## 💫 Star History
+
+</div>
 
 <a href="https://www.star-history.com/#OpenHub-Store/GitHub-Store&type=timeline&legend=top-left">
   <picture>
@@ -411,7 +462,11 @@ fit for any particular purpose.
 
 ---
 
+<div align="center">
+
 ## 📄 License
+
+</div>
 
 GitHub Store is released under the **Apache License, Version 2.0**.
 
